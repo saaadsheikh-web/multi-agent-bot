@@ -1,0 +1,17 @@
+.env*
+*.db
+*.log*
+*.pyc
+__pycache__/
+backtest_data/
+hermes_bridge/
+*.jsonl
+.DS_Store
+health.json
+broker_diag.json
+pending_*.json
+test_keys*
+bot.log*
+stdout.log
+stderr.log
+backups/

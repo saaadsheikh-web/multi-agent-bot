@@ -1,0 +1,1 @@
+2026-05-01 03:42Z | BTC +1.63% / ETH +1.37% / SOL +1.09% | flagged: ETF outflows >$490M (Cointelegraph), XRP/Fed access talks (Bitcoin.com) | CoinDesk+CT RSS CORS-blocked, used CoinGecko news fallback | Telegram sent

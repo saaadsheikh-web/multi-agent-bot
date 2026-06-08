@@ -1,0 +1,11 @@
+
+============================================================
+DOCTOR REPORT — 2026-06-08 18:08 UTC
+============================================================
+Bot running: True (2 processes)
+Webhook port: True
+API health: True
+Rate limits: 0 (last 200 lines)
+Disk space: True
+Memory: 0.8%
+============================================================

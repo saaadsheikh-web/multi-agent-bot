@@ -1,0 +1,200 @@
+//@version=6
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  HERMES MULTI-TF — All Timeframes, One Chart                ║
+// ║  5m / 15m / 30m / 1H / 4H — each TF runs independently     ║
+// ║  Apply to: ANY chart (recommend 15m or 1H)                  ║
+// ║  Alert webhook: /tv endpoint on your bot                    ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+strategy("Hermes Multi-TF", overlay=true, max_lines_count=500, max_labels_count=500,
+     initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=25)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+sl_pct   = input.float(2.5, "SL %"); trail_act = input.float(1.0, "Trail Activate %")
+min_agree = input.int(3, "Min Consensus", minval=2, maxval=6)
+show_5m  = input.bool(true, "● 5m",  group="Timeframes"); show_15m = input.bool(true, "● 15m", group="Timeframes")
+show_30m = input.bool(true, "● 30m", group="Timeframes"); show_1h  = input.bool(true, "● 1H",  group="Timeframes")
+show_4h  = input.bool(true, "● 4H",  group="Timeframes")
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER: Generate signals for a given OHLCV dataset
+// ═══════════════════════════════════════════════════════════════
+f_signals(c, h, l, v, tf_name) =>
+    // RSI
+    r = ta.rsi(c, 14)
+    rsiL = math.max(0, math.min(100, (40-r)*5))
+    rsiS = math.max(0, math.min(100, (r-60)*5))
+
+    // MACD 24/52/18
+    [ml, ms, mh] = ta.macd(c, 24, 52, 18)
+    mBull = ml > ms and mh > mh[1]
+    mBear = ml < ms and mh < mh[1]
+    macdL = mBull ? 100.0 : 0.0
+    macdS = mBear ? 100.0 : 0.0
+
+    // BB
+    bb = ta.sma(c, 20); bd = ta.stdev(c, 20) * 2
+    bbPos = (c - (bb-bd)) / ((bb+bd) - (bb-bd))
+    bbL = math.max(0, math.min(100, (1-bbPos)*100))
+    bbS = math.max(0, math.min(100, bbPos*100))
+
+    // EMA Stack
+    e9=ta.ema(c,9); e21=ta.ema(c,21); e50=ta.ema(c,50)
+    emaL = (e9>e21 and e21>e50) ? 100.0 : (e9>e21 ? 50.0 : 0.0)
+    emaS = (e9<e21 and e21<e50) ? 100.0 : (e9<e21 ? 50.0 : 0.0)
+
+    // Fib zone
+    sh=ta.highest(h,100); sl2=ta.lowest(l,100); rng=sh-sl2
+    fibL = c <= sl2+rng*0.5*1.01 and c >= sl2+rng*0.382*0.99 ? 100.0 : (c < sl2+rng*0.5 ? 60.0 : 0.0)
+    fibS = c >= sl2+rng*0.5*0.99 and c <= sl2+rng*0.618*1.01 ? 100.0 : (c > sl2+rng*0.5 ? 60.0 : 0.0)
+
+    // Volume
+    vAvg = ta.sma(v, 20)
+    vScore = math.min(100, v/vAvg*50)
+
+    // Weighted consensus
+    w = array.from(1.0, 1.5, 1.0, 1.2, 1.3, 0.8)
+    tw = array.sum(w)
+    scoreL = (rsiL*array.get(w,0) + macdL*array.get(w,1) + bbL*array.get(w,2) + emaL*array.get(w,3) + fibL*array.get(w,4) + vScore*array.get(w,5)) / tw
+    scoreS = (rsiS*array.get(w,0) + macdS*array.get(w,1) + bbS*array.get(w,2) + emaS*array.get(w,3) + fibS*array.get(w,4) + vScore*array.get(w,5)) / tw
+
+    agreesL = (rsiL>50?1:0)+(macdL>50?1:0)+(bbL>50?1:0)+(emaL>50?1:0)+(fibL>50?1:0)+(vScore>50?1:0)
+    agreesS = (rsiS>50?1:0)+(macdS>50?1:0)+(bbS>50?1:0)+(emaS>50?1:0)+(fibS>50?1:0)+(vScore>50?1:0)
+
+    longSig  = scoreL >= 50 and agreesL >= min_agree and scoreL > scoreS
+    shortSig = scoreS >= 50 and agreesS >= min_agree and scoreS > scoreL
+
+    [longSig, shortSig, scoreL, scoreS, agreesL, agreesS]
+
+// ═══════════════════════════════════════════════════════════════
+// PULL DATA FROM EACH TIMEFRAME
+// ═══════════════════════════════════════════════════════════════
+
+// 5m
+[c5, h5, l5, v5] = request.security(syminfo.tickerid, "5",  [close, high, low, volume], lookahead=barmerge.lookahead_off)
+[L5, S5, sL5, sS5, aL5, aS5] = f_signals(c5, h5, l5, v5, "5m")
+
+// 15m
+[c15,h15,l15,v15] = request.security(syminfo.tickerid, "15", [close, high, low, volume], lookahead=barmerge.lookahead_off)
+[L15,S15,sL15,sS15,aL15,aS15] = f_signals(c15,h15,l15,v15,"15m")
+
+// 30m
+[c30,h30,l30,v30] = request.security(syminfo.tickerid, "30", [close, high, low, volume], lookahead=barmerge.lookahead_off)
+[L30,S30,sL30,sS30,aL30,aS30] = f_signals(c30,h30,l30,v30,"30m")
+
+// 1H
+[c60,h60,l60,v60] = request.security(syminfo.tickerid, "60", [close, high, low, volume], lookahead=barmerge.lookahead_off)
+[L60,S60,sL60,sS60,aL60,aS60] = f_signals(c60,h60,l60,v60,"1H")
+
+// 4H
+[c240,h240,l240,v240] = request.security(syminfo.tickerid, "240", [close, high, low, volume], lookahead=barmerge.lookahead_off)
+[L240,S240,sL240,sS240,aL240,aS240] = f_signals(c240,h240,l240,v240,"4H")
+
+// ═══════════════════════════════════════════════════════════════
+// COMBINE SIGNALS (with timeframe labels)
+// ═══════════════════════════════════════════════════════════════
+
+anyL = (show_5m and L5) or (show_15m and L15) or (show_30m and L30) or (show_1h and L60) or (show_4h and L240)
+anyS = (show_5m and S5) or (show_15m and S15) or (show_30m and S30) or (show_1h and S60) or (show_4h and S240)
+
+// Build label showing which TFs agree
+tfLabel(sig5,sig15,sig30,sig60,sig240) =>
+    label = ""
+    if sig5:  label += "5m "
+    if sig15: label += "15m "
+    if sig30: label += "30m "
+    if sig60: label += "1H "
+    if sig240:label += "4H "
+    label
+
+tf_long  = tfLabel(L5,L15,L30,L60,L240)
+tf_short = tfLabel(S5,S15,S30,S60,S240)
+
+// Count TF agreement
+tf_count = (L5?1:0)+(L15?1:0)+(L30?1:0)+(L60?1:0)+(L240?1:0) + (S5?1:0)+(S15?1:0)+(S30?1:0)+(S60?1:0)+(S240?1:0)
+
+// ═══════════════════════════════════════════════════════════════
+// ENTRY — only fire when 2+ TFs agree (high conviction)
+// ═══════════════════════════════════════════════════════════════
+multi_tf_long  = anyL and ((L5?1:0)+(L15?1:0)+(L30?1:0)+(L60?1:0)+(L240?1:0)) >= 2
+multi_tf_short = anyS and ((S5?1:0)+(S15?1:0)+(S30?1:0)+(S60?1:0)+(S240?1:0)) >= 2
+
+if multi_tf_long
+    strategy.entry("L", strategy.long)
+    strategy.exit("LX","L", stop=close*(1-sl_pct/100),
+         trail_points=close*2.5/syminfo.mintick, trail_offset=close*trail_act/100/syminfo.mintick)
+
+if multi_tf_short
+    strategy.entry("S", strategy.short)
+    strategy.exit("SX","S", stop=close*(1+sl_pct/100),
+         trail_points=close*2.5/syminfo.mintick, trail_offset=close*trail_act/100/syminfo.mintick)
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALS — each TF gets a unique marker
+// ═══════════════════════════════════════════════════════════════
+
+// 5m signals — tiny dots (fast scalps)
+plotshape(show_5m and L5,  "5mL", shape.circle,        location.belowbar, color.new(#00ff00,20), size=size.tiny)
+plotshape(show_5m and S5,  "5mS", shape.circle,        location.abovebar, color.new(#ff0000,20), size=size.tiny)
+
+// 15m signals — triangles
+plotshape(show_15m and L15,"15L", shape.triangleup,    location.belowbar, color.new(#00ff00,40), size=size.small)
+plotshape(show_15m and S15,"15S", shape.triangledown,  location.abovebar, color.new(#ff0000,40), size=size.small)
+
+// 30m signals — diamonds
+plotshape(show_30m and L30,"30L", shape.diamond,       location.belowbar, color.new(#00bcd4,50), size=size.small)
+plotshape(show_30m and S30,"30S", shape.diamond,       location.abovebar, color.new(#ff9800,50), size=size.small)
+
+// 1H signals — squares (big)
+plotshape(show_1h and L60, "1HL", shape.square,        location.belowbar, color.green, size=size.normal)
+plotshape(show_1h and S60, "1HS", shape.square,        location.abovebar, color.red,   size=size.normal)
+
+// 4H signals — flags (biggest)
+plotshape(show_4h and L240,"4HL", shape.flag,          location.belowbar, color.new(#008000,0), size=size.large)
+plotshape(show_4h and S240,"4HS", shape.flag,          location.abovebar, color.new(#800000,0), size=size.large)
+
+// ═══════════════════════════════════════════════════════════════
+// MULTI-TF CONFLUENCE TABLE (bottom right panel)
+// ═══════════════════════════════════════════════════════════════
+
+// Show active TF counts in a table
+var table tbl = table.new(position.bottom_right, 6, 4, border_width=1, bgcolor=#1a1a1a)
+if barstate.islast
+    tfCol(color bg) => bg
+    table.cell(tbl,0,0,"TF", text_color=color.white, bgcolor=#333333)
+    table.cell(tbl,0,1,"LONG", text_color=color.white, bgcolor=#333333)
+    table.cell(tbl,0,2,"SHORT",text_color=color.white, bgcolor=#333333)
+    table.cell(tbl,0,3,"Agrees",text_color=color.white, bgcolor=#333333)
+
+    table.cell(tbl,1,0,"5m",   text_color=color.white, bgcolor=show_5m?#222222:na)
+    table.cell(tbl,1,1,str.tostring(sL5, "#"),   text_color=sL5>50?color.green:color.gray, bgcolor=show_5m?#222222:na)
+    table.cell(tbl,1,2,str.tostring(sS5, "#"),   text_color=sS5>50?color.red:color.gray,   bgcolor=show_5m?#222222:na)
+    table.cell(tbl,1,3,str.tostring(aL5)+"/"+str.tostring(aS5), text_color=color.white, bgcolor=show_5m?#222222:na)
+
+    table.cell(tbl,2,0,"15m",  text_color=color.white, bgcolor=show_15m?#222222:na)
+    table.cell(tbl,2,1,str.tostring(sL15,"#"),  text_color=sL15>50?color.green:color.gray, bgcolor=show_15m?#222222:na)
+    table.cell(tbl,2,2,str.tostring(sS15,"#"),  text_color=sS15>50?color.red:color.gray,   bgcolor=show_15m?#222222:na)
+    table.cell(tbl,2,3,str.tostring(aL15)+"/"+str.tostring(aS15), text_color=color.white, bgcolor=show_15m?#222222:na)
+
+    table.cell(tbl,3,0,"30m",  text_color=color.white, bgcolor=show_30m?#222222:na)
+    table.cell(tbl,3,1,str.tostring(sL30,"#"),  text_color=sL30>50?color.green:color.gray, bgcolor=show_30m?#222222:na)
+    table.cell(tbl,3,2,str.tostring(sS30,"#"),  text_color=sS30>50?color.red:color.gray,   bgcolor=show_30m?#222222:na)
+    table.cell(tbl,3,3,str.tostring(aL30)+"/"+str.tostring(aS30), text_color=color.white, bgcolor=show_30m?#222222:na)
+
+    table.cell(tbl,4,0,"1H",   text_color=color.white, bgcolor=show_1h?#222222:na)
+    table.cell(tbl,4,1,str.tostring(sL60,"#"),  text_color=sL60>50?color.green:color.gray, bgcolor=show_1h?#222222:na)
+    table.cell(tbl,4,2,str.tostring(sS60,"#"),  text_color=sS60>50?color.red:color.gray,   bgcolor=show_1h?#222222:na)
+    table.cell(tbl,4,3,str.tostring(aL60)+"/"+str.tostring(aS60), text_color=color.white, bgcolor=show_1h?#222222:na)
+
+    table.cell(tbl,5,0,"4H",   text_color=color.white, bgcolor=show_4h?#222222:na)
+    table.cell(tbl,5,1,str.tostring(sL240,"#"), text_color=sL240>50?color.green:color.gray, bgcolor=show_4h?#222222:na)
+    table.cell(tbl,5,2,str.tostring(sS240,"#"), text_color=sS240>50?color.red:color.gray,   bgcolor=show_4h?#222222:na)
+    table.cell(tbl,5,3,str.tostring(aL240)+"/"+str.tostring(aS240), text_color=color.white, bgcolor=show_4h?#222222:na)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS — multi-TF only (2+ TFs agreeing)
+// ═══════════════════════════════════════════════════════════════
+alertcondition(multi_tf_long,  "🟢 MULTI-TF LONG",  "LONG: {{ticker}} @ {{close}} | TFs: " + tf_long)
+alertcondition(multi_tf_short, "🔴 MULTI-TF SHORT", "SHORT: {{ticker}} @ {{close}} | TFs: " + tf_short)

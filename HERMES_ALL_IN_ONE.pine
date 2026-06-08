@@ -1,0 +1,175 @@
+//@version=6
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  HERMES ALL-IN-ONE — 4 Strategies, 1 Chart                  ║
+// ║  1. HERMES MASTER — 6-indicator composite (15m primary)      ║
+// ║  2. MACD CROSS   — 24/52/18 + volume + 5m confirm           ║
+// ║  3. DAILY BREAKOUT — 1H range breakout + wide trail          ║
+// ║  4. FIB BOUNCE   — 0.618 fib + ADX filter                   ║
+// ║  Apply to: 15m chart | Alerts: webhook to /tv endpoint       ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+strategy("Hermes All-in-One", overlay=true,
+     initial_capital=1000, default_qty_type=strategy.percent_of_equity,
+     default_qty_value=25, commission_type=strategy.commission.percent, commission_value=0.1)
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED INPUTS
+// ═══════════════════════════════════════════════════════════════
+sl_global    = input.float(2.5, "Global SL %", step=0.5)
+trail_wide   = input.float(5.0, "Wide Trail %", step=0.5, tooltip="For fib/breakout")
+trail_tight  = input.float(2.0, "Tight Trail %", step=0.5, tooltip="For hermes/macd")
+trail_act    = input.float(1.0, "Trail Activate %", step=0.5)
+use_hermes   = input.bool(true, "1. Hermes Master", group="Strategies")
+use_macd     = input.bool(true, "2. MACD Cross", group="Strategies")
+use_breakout = input.bool(true, "3. Daily Breakout", group="Strategies")
+use_fib      = input.bool(true, "4. Fib Bounce", group="Strategies")
+
+// ═══════════════════════════════════════════════════════════════
+// STRATEGY 1: HERMES MASTER (15m primary)
+// ═══════════════════════════════════════════════════════════════
+
+// RSI
+r = ta.rsi(close, 14)
+rsi_long  = math.max(0, math.min(100, (40-r)*5))
+rsi_short = math.max(0, math.min(100, (r-60)*5))
+
+// MACD 24/52/18
+[ml, ms, mh] = ta.macd(close, 24, 52, 18)
+macd_bull = ml>ms and mh>mh[1]; macd_bear = ml<ms and mh<mh[1]
+macd_long  = macd_bull ? 100.0 : 0.0
+macd_short = macd_bear ? 100.0 : 0.0
+
+// Bollinger
+bb = ta.sma(close,20); bb_dev = ta.stdev(close,20)*2
+bb_pos = (close-(bb-bb_dev))/((bb+bb_dev)-(bb-bb_dev))
+bb_long  = math.max(0, math.min(100, (1-bb_pos)*100))
+bb_short = math.max(0, math.min(100, bb_pos*100))
+
+// EMA stack
+e9=ta.ema(close,9); e21=ta.ema(close,21); e50=ta.ema(close,50)
+ema_bull = e9>e21 and e21>e50; ema_bear = e9<e21 and e21<e50
+ema_long  = ema_bull?100.0:(e9>e21?50.0:0.0)
+ema_short = ema_bear?100.0:(e9<e21?50.0:0.0)
+
+// Fibonacci
+sw_hi = ta.highest(high,100); sw_lo = ta.lowest(low,100)
+rng = sw_hi-sw_lo
+f382=sw_lo+rng*0.382; f500=sw_lo+rng*0.5; f618=sw_lo+rng*0.618
+fib_long  = close<=f500*1.01 and close>=f382*0.99 ? 100.0 : (close<f500?60.0:0.0)
+fib_short = close>=f500*0.99 and close<=f618*1.01 ? 100.0 : (close>f500?60.0:0.0)
+
+// Volume
+vol_r = volume/ta.sma(volume,20)
+vol_s = math.min(100, vol_r*50)
+
+// Weighted consensus
+w=[1.0,1.5,1.0,1.2,1.3,0.8]; tw=w[0]+w[1]+w[2]+w[3]+w[4]+w[5]
+h_long  = (rsi_long*w[0] + macd_long*w[1] + bb_long*w[2] + ema_long*w[3] + fib_long*w[4] + vol_s*w[5])/tw
+h_short = (rsi_short*w[0] + macd_short*w[1] + bb_short*w[2] + ema_short*w[3] + fib_short*w[4] + vol_s*w[5])/tw
+
+h_agree_long  = (rsi_long>50?1:0)+(macd_long>50?1:0)+(bb_long>50?1:0)+(ema_long>50?1:0)+(fib_long>50?1:0)+(vol_s>50?1:0)
+h_agree_short = (rsi_short>50?1:0)+(macd_short>50?1:0)+(bb_short>50?1:0)+(ema_short>50?1:0)+(fib_short>50?1:0)+(vol_s>50?1:0)
+
+// 5m confirm
+c5=request.security(syminfo.tickerid,"5",close)
+e5f=ta.ema(c5,24); e5s=ta.ema(c5,52)
+confirm5 = e5f>e5s ? 1 : (e5f<e5s ? -1 : 0)
+
+hermes_long  = use_hermes and h_long>=50 and h_agree_long>=3 and h_long>h_short and confirm5>=0
+hermes_short = use_hermes and h_short>=50 and h_agree_short>=3 and h_short>h_long and confirm5<=0
+
+// ═══════════════════════════════════════════════════════════════
+// STRATEGY 2: MACD CROSS (15m+5m)
+// ═══════════════════════════════════════════════════════════════
+m_bull = ml>ms and mh>mh[1] and ml[1]<=ms[1]
+m_bear = ml<ms and mh<mh[1] and ml[1]>=ms[1]
+macd_vol_ok = volume > ta.sma(volume,20)*1.8
+
+macd_long  = use_macd and m_bull and macd_vol_ok and confirm5>0
+macd_short = use_macd and m_bear and macd_vol_ok and confirm5<0
+
+// ═══════════════════════════════════════════════════════════════
+// STRATEGY 3: DAILY BREAKOUT (1H)
+// ═══════════════════════════════════════════════════════════════
+// Get 1H data
+h_1h = request.security(syminfo.tickerid, "60", high)
+l_1h = request.security(syminfo.tickerid, "60", low)
+c_1h = request.security(syminfo.tickerid, "60", close)
+v_1h = request.security(syminfo.tickerid, "60", volume)
+
+r_hi = ta.highest(h_1h, 24)[1]
+r_lo = ta.lowest(l_1h, 24)[1]
+
+db_long  = use_breakout and c_1h>r_hi and c_1h[1]<=r_hi and v_1h>ta.sma(v_1h,20)*1.2
+db_short = use_breakout and c_1h<r_lo and c_1h[1]>=r_lo and v_1h>ta.sma(v_1h,20)*1.2
+
+// ═══════════════════════════════════════════════════════════════
+// STRATEGY 4: FIB BOUNCE (1H)
+// ═══════════════════════════════════════════════════════════════
+sw_h = ta.highest(h_1h, 100)
+sw_l = ta.lowest(l_1h, 100)
+fb = sw_h - (sw_h-sw_l)*0.618  // 0.618 retracement support
+fr = sw_l + (sw_h-sw_l)*0.618  // 0.618 resistance
+
+[dp, dm, ax] = ta.dmi(h_1h, l_1h, c_1h, 14)
+adx_up = ax>20 and dp>dm; adx_dn = ax>20 and dm>dp
+
+fib_near_support = l_1h<=fb*1.01 and l_1h>=fb*0.99 and c_1h>c_1h[1]
+fib_near_resist  = h_1h>=fr*0.99 and h_1h<=fr*1.01 and c_1h<c_1h[1]
+
+fib_long  = use_fib and fib_near_support and adx_up and c_1h>ta.ema(c_1h,50)
+fib_short = use_fib and fib_near_resist and adx_dn and c_1h<ta.ema(c_1h,50)
+
+// ═══════════════════════════════════════════════════════════════
+// COMBINE + EXECUTE (no duplicates)
+// ═══════════════════════════════════════════════════════════════
+any_long  = hermes_long or macd_long or db_long or fib_long
+any_short = hermes_short or macd_short or db_short or fib_short
+
+// Build label
+long_label = (hermes_long?"H ":"") + (macd_long?"M ":"") + (db_long?"DB ":"") + (fib_long?"F":"")
+short_label= (hermes_short?"H ":"") + (macd_short?"M ":"") + (db_short?"DB ":"") + (fib_short?"F":"")
+
+if any_long
+    strategy.entry("L", strategy.long)
+    strategy.exit("LX", "L", stop=close*(1-sl_global/100),
+         trail_points=close*trail_wide/100/syminfo.mintick,
+         trail_offset=close*trail_act/100/syminfo.mintick)
+
+if any_short
+    strategy.entry("S", strategy.short)
+    strategy.exit("SX", "S", stop=close*(1+sl_global/100),
+         trail_points=close*trail_wide/100/syminfo.mintick,
+         trail_offset=close*trail_act/100/syminfo.mintick)
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALS
+// ═══════════════════════════════════════════════════════════════
+plotshape(hermes_long,  "H-L", shape.triangleup,   location.belowbar, color.green, size=size.tiny)
+plotshape(hermes_short, "H-S", shape.triangledown, location.abovebar, color.red,   size=size.tiny)
+plotshape(macd_long,    "M-L", shape.circle,        location.belowbar, color.blue,  size=size.tiny)
+plotshape(macd_short,   "M-S", shape.circle,        location.abovebar, color.orange,size=size.tiny)
+plotshape(db_long,      "DB-L",shape.square,        location.belowbar, color.green, size=size.small)
+plotshape(db_short,     "DB-S",shape.square,        location.abovebar, color.red,   size=size.small)
+plotshape(fib_long,     "F-L", shape.diamond,       location.belowbar, color.teal,  size=size.small)
+plotshape(fib_short,    "F-S", shape.diamond,       location.abovebar, color.maroon,size=size.small)
+
+// Key levels
+plot(e50, "EMA 50", color.new(#9c27b0,40), 2)
+plot(r_hi, "Range Hi", color.new(color.green,70), 1, display=display.none)
+plot(r_lo, "Range Lo", color.new(color.red,70), 1, display=display.none)
+plot(fb, "Fib 0.618", color.new(#ff9800,40), 2, display=display.none)
+
+// Consensus gauge
+hline(50, "Threshold", color.gray, hline.style_dashed)
+plot(h_long,  "Hermes Score", color.green, display=display.status_line)
+plot(h_short, "",             color.red,   display=display.status_line)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+alertcondition(any_long,  "🟢 ANY LONG",  "LONG: {{ticker}} @ {{close}} | Strategies: " + long_label)
+alertcondition(any_short, "🔴 ANY SHORT", "SHORT: {{ticker}} @ {{close}} | Strategies: " + short_label)
+
+// Legend (shown in data window)
+// H = Hermes Master | M = MACD Cross | DB = Daily Breakout | F = Fib Bounce

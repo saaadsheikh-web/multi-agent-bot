@@ -1,0 +1,12 @@
+- [Never lie](never-lie.md) — absolute honesty, never exaggerate
+- [Saad communication pref](saad-communication-pref.md) — short, precise, no repetition
+- [Viki strategy](viki-strategy.md) — triple EMA 9/21/50 crossover, best at 30m+5m confirm (+14.5%)
+- [Comprehensive backtest 2026-06-03](comprehensive-backtest-20260603.md) — all 44 agents × 4 TFs, top: daily_breakout 1H +1,992%
+- [Backtest statistical findings](backtest-statistical-findings.md) — WR correlation, trade count sweet spot, TF analysis, native vs non-native
+- [Backtest agent recommendations](backtest-agent-recommendations.md) — which agents to keep, enable, disable, or modify
+- [Trail stop strategy](trail-stop-strategy.md) — tight trails kill profits, use fib-based dynamic trailing
+- [Deployment plan 2026-06-03](deployment-plan-20260603.md) — final config applied to bot, coin scout approach
+- [Final deployment 2026-06-04](final-deployment-20260604.md) — winners only, 28 agents killed, 9 kept, all findings applied
+- [NEVER DO AGAIN](NEVER-DO-AGAIN.md) — 7 rules from live trading losses
+- [Permanently banned](permanently-banned.md) — agents and patterns blocked forever
+- [Entry speed edge](entry-speed-edge.md) — THE fundamental truth: 5m beats 1H because faster entry = more profit captured

@@ -1,0 +1,79 @@
+//@version=6
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  HERMES 15m — MACD Cross + Hermes Master Composite          ║
+// ║  Apply to: 15-minute chart                                  ║
+// ║  Proven: MACD +29% backtest, +$32 live                      ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+strategy("Hermes 15m — MACD + Composite", overlay=true,
+     initial_capital=1000, default_qty_type=strategy.percent_of_equity,
+     default_qty_value=50, commission_type=strategy.commission.percent, commission_value=0.1)
+
+// ── Inputs ──
+sl_pct  = input.float(2.5, "SL %"); trail_act = input.float(1.0, "Trail Activate %")
+show_macd   = input.bool(true, "MACD Cross", group="Signals")
+show_hermes = input.bool(true, "Hermes Master", group="Signals")
+
+// ═══════════════════════════════════════
+// MACD CROSS — 24/52/18 + Vol > 1.8×
+// ═══════════════════════════════════════
+[ml, ms, mh] = ta.macd(close, 24, 52, 18)
+m_bull = ml>ms and mh>mh[1] and ml[1]<=ms[1]
+m_bear = ml<ms and mh<mh[1] and ml[1]>=ms[1]
+m_vol  = volume > ta.sma(volume,20)*1.8
+// 5m confirm
+c5=request.security(syminfo.tickerid,"5",close)
+e5f=ta.ema(c5,24); e5s=ta.ema(c5,52); c5bull=e5f>e5s; c5bear=e5f<e5s
+macd_long  = show_macd and m_bull and m_vol and c5bull
+macd_short = show_macd and m_bear and m_vol and c5bear
+
+// ═══════════════════════════════════════
+// HERMES MASTER — 6-indicator consensus
+// ═══════════════════════════════════════
+r=ta.rsi(close,14)
+rsiL=math.max(0,math.min(100,(40-r)*5)); rsiS=math.max(0,math.min(100,(r-60)*5))
+[hl,hs,hh]=ta.macd(close,24,52,18)
+hbull=hl>hs and hh>hh[1]; hbear=hl<hs and hh<hh[1]
+hL=math.max(0,math.min(100,(1-(close-(ta.sma(close,20)-ta.stdev(close,20)*2))/((ta.sma(close,20)+ta.stdev(close,20)*2)-(ta.sma(close,20)-ta.stdev(close,20)*2)))*100))
+hS=math.max(0,math.min(100,(close-(ta.sma(close,20)-ta.stdev(close,20)*2))/((ta.sma(close,20)+ta.stdev(close,20)*2)-(ta.sma(close,20)-ta.stdev(close,20)*2))*100))
+e9=ta.ema(close,9);e21=ta.ema(close,21);e50=ta.ema(close,50)
+eL=(e9>e21 and e21>e50)?100.0:(e9>e21?50.0:0.0)
+eS=(e9<e21 and e21<e50)?100.0:(e9<e21?50.0:0.0)
+sh=ta.highest(high,100);sl=ta.lowest(low,100);rn=sh-sl
+fL=close<=sl+rn*0.5*1.01?100.0:(close<sl+rn*0.5?60.0:0.0)
+fS=close>=sl+rn*0.5*0.99?100.0:(close>sl+rn*0.5?60.0:0.0)
+vS=math.min(100,volume/ta.sma(volume,20)*50)
+
+w=[1.0,1.5,1.0,1.2,1.3,0.8];tw=w[0]+w[1]+w[2]+w[3]+w[4]+w[5]
+hmL=(rsiL*w[0]+(hbull?100.0:0.0)*w[1]+hL*w[2]+eL*w[3]+fL*w[4]+vS*w[5])/tw
+hmS=(rsiS*w[0]+(hbear?100.0:0.0)*w[1]+hS*w[2]+eS*w[3]+fS*w[4]+vS*w[5])/tw
+agL=(rsiL>50?1:0)+(hbull?1:0)+(hL>50?1:0)+(eL>50?1:0)+(fL>50?1:0)+(vS>50?1:0)
+agS=(rsiS>50?1:0)+(hbear?1:0)+(hS>50?1:0)+(eS>50?1:0)+(fS>50?1:0)+(vS>50?1:0)
+
+hermes_long  = show_hermes and hmL>=50 and agL>=3 and hmL>hmS and c5bull
+hermes_short = show_hermes and hmS>=50 and agS>=3 and hmS>hmL and c5bear
+
+// ═══════════════════════════════════════
+// EXECUTE
+// ═══════════════════════════════════════
+anyL = macd_long or hermes_long
+anyS = macd_short or hermes_short
+
+if anyL
+    strategy.entry("15L", strategy.long)
+    strategy.exit("15LX","15L",stop=close*(1-sl_pct/100),
+         trail_points=close*2/syminfo.mintick, trail_offset=close*trail_act/100/syminfo.mintick)
+if anyS
+    strategy.entry("15S", strategy.short)
+    strategy.exit("15SX","15S",stop=close*(1+sl_pct/100),
+         trail_points=close*2/syminfo.mintick, trail_offset=close*trail_act/100/syminfo.mintick)
+
+// Visuals
+plotshape(macd_long,"M",shape.triangleup,location.belowbar,color.blue,size=size.tiny)
+plotshape(macd_short,"M",shape.triangledown,location.abovebar,color.orange,size=size.tiny)
+plotshape(hermes_long,"H",shape.circle,location.belowbar,color.green,size=size.tiny)
+plotshape(hermes_short,"H",shape.circle,location.abovebar,color.red,size=size.tiny)
+plot(e50,"EMA50",color.new(#9c27b0,40),2)
+
+alertcondition(anyL,"15m LONG","LONG:{{ticker}}@{{close}} TF:15m")
+alertcondition(anyS,"15m SHORT","SHORT:{{ticker}}@{{close}} TF:15m")

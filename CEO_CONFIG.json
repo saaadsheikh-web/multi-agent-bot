@@ -1,0 +1,175 @@
+{
+  "_comment": "CEO AGENT OVERRIDE — 2026-06-08",
+  "_description": "Enables only proven winning strategies with optimal settings. Based on 869,199 trade backtest across 46 coins × 4 TFs.",
+  "version": "1.0",
+  
+  "active_strategies": {
+    "daily_breakout_12h": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "lookback_bars": 12,
+      "sl_pct": 1.8,
+      "volume_ratio": 1.5,
+      "trail_activate_pct": 10.0,
+      "trail_distance_pct": 10.0,
+      "valid_regimes": ["TRENDING", "VOLATILE"],
+      "_backtest": "+653R, 60% WR, 2908 trades on 1H"
+    },
+    "daily_breakout_48h": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "lookback_bars": 48,
+      "sl_pct": 3.0,
+      "volume_ratio": 1.9,
+      "trail_activate_pct": 20.0,
+      "trail_distance_pct": 20.0,
+      "valid_regimes": ["TRENDING", "VOLATILE"],
+      "_backtest": "+233R, 67% WR, 654 trades on 30m"
+    },
+    "daily_breakout": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "lookback_bars": 168,
+      "sl_pct": 4.0,
+      "volume_ratio": 2.0,
+      "trail_activate_pct": 10.0,
+      "trail_distance_pct": 10.0,
+      "valid_regimes": ["TRENDING", "VOLATILE"],
+      "_backtest": "+216R, 68% WR, 811 trades on 1H"
+    },
+    "trend_pullback": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "trail_activate_pct": 10.0,
+      "trail_distance_pct": 10.0,
+      "valid_regimes": ["TRENDING"],
+      "_backtest": "+55R, 59% WR, 1527 trades on 1H"
+    },
+    "volume_capitulation": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "trail_activate_pct": 3.0,
+      "trail_distance_pct": 3.0,
+      "valid_regimes": ["VOLATILE", "RANGING"],
+      "_backtest": "+9R, 69% WR, 35 trades, rare but profitable"
+    },
+    "asian_pump": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "trail_activate_pct": 5.0,
+      "trail_distance_pct": 5.0,
+      "valid_regimes": ["TRENDING", "VOLATILE"],
+      "_backtest": "+10R, 75% WR, 44 trades"
+    },
+    "fib_bounce": {
+      "enabled": true,
+      "paper_only": false,
+      "notional_multiplier": 0.1,
+      "trail_activate_pct": 3.0,
+      "trail_distance_pct": 3.0,
+      "valid_regimes": ["TRENDING"],
+      "_backtest": "FIB 0.500 winner, +2,889% backtest"
+    }
+  },
+  
+  "inactive_strategies": {
+    "macd_cross": {
+      "enabled": false,
+      "reason": "Backtest: -42R on 1H. Regime-dependent. Only works in trending, bleeds in ranging. Not worth the risk."
+    },
+    "connors_rsi2": {
+      "enabled": false,
+      "reason": "Backtest: -473R. Too many trades, fee drag kills all profit."
+    },
+    "stoch_rsi": {
+      "enabled": false,
+      "reason": "Backtest: -291R. Too noisy, false signals everywhere."
+    },
+    "bb_bounce": {
+      "enabled": false,
+      "reason": "Backtest: -190R. Mean reversion in trending = death."
+    },
+    "ema_ribbon": {
+      "enabled": false,
+      "reason": "Backtest: -689R. Overfitted, doesn't generalize."
+    },
+    "zscore_reversion": {
+      "enabled": false,
+      "reason": "Backtest: -1,150R. Worst strategy in the entire backtest. Avoid forever."
+    },
+    "rsi_divergence": {
+      "enabled": false,
+      "reason": "Backtest: -116R. Divergence is real but this implementation loses."
+    },
+    "fibonacci": {
+      "enabled": false,
+      "reason": "Backtest: -150R. Standard retracement strategy loses."
+    },
+    "funding_extremes": {
+      "enabled": false,
+      "reason": "Backtest: -161R. Funding rate arbitrage loses on BloFin."
+    },
+    "candlestick": {
+      "enabled": false,
+      "reason": "Backtest: -58R. Pattern recognition alone isn't enough."
+    },
+    "bb_squeeze": {
+      "enabled": false,
+      "reason": "Backtest: -91R. Bollinger squeeze fires too late."
+    },
+    "momentum": {
+      "enabled": false,
+      "reason": "Backtest: -686R. Raw momentum without filters loses."
+    },
+    "swing": {
+      "enabled": false,
+      "reason": "Backtest: -102R. Too wide stops, too few trades."
+    },
+    "scalp": {
+      "enabled": false,
+      "reason": "Backtest: -10R. Tight stops + fee = death on scalping."
+    },
+    "meanrev": {
+      "enabled": false,
+      "reason": "Backtest: -1.4R. Mean reversion fights the trend."
+    },
+    "asymmetric": {
+      "enabled": false,
+      "reason": "Backtest: +28R but only 570 trades. Too niche. Replaced by breakouts."
+    },
+    "donchian": {
+      "enabled": false,
+      "reason": "Backtest: +102R but breakout_12h is better (+653R). Replaced."
+    }
+  },
+  
+  "compound_config": {
+    "enabled": true,
+    "method": "daily_recalc",
+    "description": "Every day, recalculate position size based on current account equity.",
+    "risk_per_trade_pct": 3.0,
+    "max_risk_pct": 14.5,
+    "kelly_criterion": "Half-Kelly = 14.5%",
+    "compound_frequency": "daily",
+    "withdraw_target": 1000000,
+    "_note": "Start at 3%, increase to 5% at $10k, 10% at $50k, 14.5% at $100k"
+  },
+  
+  "trail_master_config": {
+    "method": "strategy_specific",
+    "strategies": {
+      "breakout_5m": { "trail_pct": 20.0, "note": "Very loose trail for fast TFs" },
+      "breakout_15m": { "trail_pct": 10.0, "note": "Medium trail for medium TFs" },
+      "breakout_1H": { "trail_pct": 10.0, "note": "Medium trail for slow TFs" },
+      "fib_ext": { "method": "atr", "atr_mult": 3.0, "note": "Adaptive trail based on volatility" },
+      "trend_pullback": { "trail_pct": 10.0, "note": "Winners run big, let them" },
+      "volume_cap": { "trail_pct": 3.0, "note": "Quick reversals, tighter trail" }
+    }
+  }
+}
