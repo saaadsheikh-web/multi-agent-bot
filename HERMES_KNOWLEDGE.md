@@ -1,4 +1,4 @@
-# HERMES KNOWLEDGE SCAN — 2026-06-08 18:32 UTC
+# HERMES KNOWLEDGE SCAN — 2026-06-08 23:58 UTC
 
 ## 📁 FILESYSTEM SCAN
 
@@ -10,7 +10,7 @@
 - ✅ **chrome_hyperliquid** (0.04 MB)
 - ✅ **chrome_polymarket** (2.12 MB)
 - ✅ **chrome_goatfunded** (0.01 MB)
-- ✅ **hyperliquid_bot** (39.83 MB)
+- ✅ **hyperliquid_bot** (39.87 MB)
 - ✅ **polymarket_bot** (0.0 MB)
 - ✅ **blofin_bot** (0.01 MB)
 - ✅ **clawbot** (0.0 MB)
@@ -267,7 +267,7 @@ This Drive file is a copy of `~/multi_agent_bot/HUNTER_BRIEF.md` which already e
 
 ## 💾 DATABASE SNAPSHOT
 
-- Total trades: 380
+- Total trades: 381
 - Closed: 380
 - Lifetime P&L: $-15.10
 - Best agent: macd_cross ($+32.37)

@@ -4,4 +4,4 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.npm-global/bin:/usr/bin:/bi
 set -a
 [ -f "$HOME/multi_agent_bot/.env" ] && source "$HOME/multi_agent_bot/.env"
 set +a
-exec /opt/homebrew/Caskroom/miniconda/base/bin/python3 "$HOME/multi_agent_bot/bot.py" "$@"
+exec /opt/homebrew/Caskroom/miniconda/base/bin/conda run --no-capture-output -n base python "$HOME/multi_agent_bot/bot.py" "$@"

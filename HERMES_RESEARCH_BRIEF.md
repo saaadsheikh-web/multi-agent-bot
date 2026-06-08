@@ -1,16 +1,16 @@
 # Hermes Research Brief
 
-**Updated:** 2026-06-08T17:35:28.476224+00:00
+**Updated:** 2026-06-08T22:57:17.806155+00:00
 **Macro bias:** neutral
 
-**MARKET READ:** Mixed signals. BTC short squeeze possible, but Aave risk and weak agent P&L keep bias neutral.
+**Market Read:** Mixed signals — BTC short squeeze possible, but agent losses suggest caution.
 
-**COINS TO WATCH:**
-- **NEAR:** +12.3% gain, strong news score (+0.67). Momentum play.
-- **BTC:** Funding rate drop hints at short squeeze. Watch for breakout.
-- **AAVE:** $8.45B bank run defended. Negative score (-0.33). Avoid until stable.
+**Coins to Watch:**
+- **NEAR:** +12.3% gain, strong momentum. Watch for continuation.
+- **AAVE:** -0.33 score, $8.45B bank run defense. Volatile, avoid early.
+- **BTC:** Funding rate drop hints at short squeeze. $2.6B trap risk.
 
-**RISK TO AVOID:** Aave. High headline risk. Let it settle.
+**Risk to Avoid:** Hermes master agent losing $-8.7 — don’t chase breakouts today.
 
 BIAS: neutral
 

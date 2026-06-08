@@ -1382,7 +1382,7 @@ class Agent:
 # =============================================================================
 class ScalpAgent(Agent):
     name = "scalp"
-    enabled = False
+    enabled = True
     profile = "scalp"
     valid_regimes = ["RANGING", "VOLATILE"]
 
@@ -1420,9 +1420,9 @@ class ScalpAgent(Agent):
 # =============================================================================
 class MomentumAgent(Agent):
     name = "momentum"
-    enabled = False
+    enabled = True
     profile = "momentum"
-    valid_regimes = ["TRENDING"]
+    valid_regimes = ["RANGING", "TRENDING"]
 
     def analyze(self, sym, ctx):
         df = ctx.df_15m
@@ -1455,7 +1455,7 @@ class MomentumAgent(Agent):
 # =============================================================================
 class SwingAgent(Agent):
     name = "swing"
-    enabled = False
+    enabled = True
     profile = "swing"
     valid_regimes = ["RANGING"]
 
@@ -4831,7 +4831,7 @@ class VikiAgent(Agent):
     valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
 
     # Symbols with proven edge from backtest (81.5%+ WR combined)
-    WHITELIST = {"SOL-USDT", "TAO-USDT", "TIA-USDT"}
+    WHITELIST = {"SOL-USDT", "TAO-USDT", "TIA-USDT", "BTC-USDT", "ETH-USDT", "BNB-USDT", "XRP-USDT"}
 
     def analyze(self, sym, ctx):
         # Only fire on backtest-validated symbols
@@ -6746,7 +6746,7 @@ async def _tv_handle(request: "aiohttp.web.Request", state) -> "aiohttp.web.Resp
     agent_name = strategy.replace("_long","").replace("_short","")
     sig = Signal(
         agent=f"tv_{agent_name}",
-        symbol=symbol,
+        symbol=normalized_symbol,
         side=side_raw,
         confidence=confidence,
         profile=profile,
