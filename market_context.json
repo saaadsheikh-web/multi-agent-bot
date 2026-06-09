@@ -16,5 +16,5 @@
     "reason": "Cannot connect to host api.helios.finance:443 ssl:True [SSLCertVerificationError: (1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: EE certificate key too weak (_ssl.c:1032)')]"
   },
   "market_bias": "neutral",
-  "timestamp": "2026-06-09T02:21:47.786437+00:00"
+  "timestamp": "2026-06-09T03:17:44.607910+00:00"
 }

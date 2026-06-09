@@ -1382,7 +1382,7 @@ class Agent:
 # =============================================================================
 class ScalpAgent(Agent):
     name = "scalp"
-    enabled = True
+    enabled = False  # DISABLED — backtest: -10%, 49% WR
     profile = "scalp"
     valid_regimes = ["RANGING", "VOLATILE"]
 
@@ -1455,7 +1455,7 @@ class MomentumAgent(Agent):
 # =============================================================================
 class SwingAgent(Agent):
     name = "swing"
-    enabled = True
+    enabled = False  # DISABLED — backtest: -34%, 44% WR
     profile = "swing"
     valid_regimes = ["RANGING"]
 
@@ -2478,7 +2478,7 @@ class VolumeCapitulationAgent(Agent):
     When price spikes >3% on >4x volume + RSI > 70, fade-short.
     Catches over-extension at exhaustion points."""
     name = "volume_capitulation"
-    enabled = True   # 2026-06-08: CEO ENABLED — +9R backtest, rare but high WR
+    enabled = False  # DISABLED — backtest: -9%, 49% WR
     paper_only = False  # 2026-06-08: CEO ACTIVATED — live trading
     profile = "volume_capitulation"
     valid_regimes = ["VOLATILE", "RANGING"]
@@ -2530,7 +2530,7 @@ class AsianPumpAgent(Agent):
     """Catches volume + momentum spikes during the Asian session (02:00-05:00 UTC)
     when Western markets are asleep. Time-of-day is the primary filter."""
     name = "asian_pump"
-    enabled = True   # 2026-06-08: CEO ENABLED — +10R backtest, gold at 4h UTC
+    enabled = False  # DISABLED — backtest: -80%, 47% WR
     paper_only = False
     profile = "asian_pump"
     valid_regimes = []   # any regime — time gates it
@@ -5069,7 +5069,7 @@ class VikiAgent(Agent):
     """Triple EMA crossover on 15m + 5m confirm — 9/21/50 alignment.
     2026-06-06: MarketContext lacks 30m, using 15m+5m instead."""
     name = "viki"
-    enabled = True   # 2026-06-05: RE-ENABLED — 81.5% WR, +68% backtest
+    enabled = False  # DISABLED — backtest: -8.5%, 47% WR
     paper_only = False
     profile = "viki"
     valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
@@ -5163,7 +5163,7 @@ class MACDCrossAgent(Agent):
     """2026-06-04: Backtest proved this bleeds (-42R 1H, -1,506R all TFs).
     Keeping at reduced size for trending markets only."""
     name = "macd_cross"
-    enabled = True  # 2026-06-08: CEO REDUCED — backtest loses, live wins. Keep small.
+    enabled = False  # DISABLED — backtest: -41%, 48% WR
     paper_only = False
     profile = "macd_cross"
     valid_regimes = ["TRENDING", "VOLATILE"]
@@ -8419,10 +8419,11 @@ async def watchdog_loop(state):
 
 async def restart_watch_loop(state):
     """
-    Watch bot.py / .env / .restart_trigger for changes. Exit cleanly when any
-    change. LaunchAgent KeepAlive auto-restarts the process — so an external
-    edit (by Cowork/Claude) propagates without any human touching launchctl.
+    DISABLED 2026-06-09: Was killing bot on every edit but no LaunchAgent
+    to auto-restart. Doctor agent handles restarts instead.
     """
+    await asyncio.sleep(3600)  # Check once per hour (effectively disabled)
+    return  # Never run the watch loop
     paths = [BOT_PY_PATH, ENV_PATH, RESTART_TRIGGER_PATH]
     initial = {}
     for p in paths:
