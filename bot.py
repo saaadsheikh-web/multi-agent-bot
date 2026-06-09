@@ -8513,7 +8513,11 @@ async def hermes_loop(state):
     if not HAS_HERMES:
         log.info("hermes_loop: hermes_bridge not importable, skipping")
         return
-    bridge = _HermesBridge()
+    try:
+        bridge = _HermesBridge()
+    except Exception as e:
+        log.warning(f"hermes_loop: bridge init failed ({e}), disabling")
+        return
     ctx = _HermesBotCtx(state)
     state.hermes = bridge
     log.info(f"hermes_loop: bridge active at {bridge.root}")
