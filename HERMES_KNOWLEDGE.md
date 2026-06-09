@@ -1,4 +1,4 @@
-# HERMES KNOWLEDGE SCAN — 2026-06-09 00:36 UTC
+# HERMES KNOWLEDGE SCAN — 2026-06-09 01:11 UTC
 
 ## 📁 FILESYSTEM SCAN
 
@@ -10,7 +10,7 @@
 - ✅ **chrome_hyperliquid** (0.04 MB)
 - ✅ **chrome_polymarket** (2.12 MB)
 - ✅ **chrome_goatfunded** (0.01 MB)
-- ✅ **hyperliquid_bot** (39.87 MB)
+- ✅ **hyperliquid_bot** (39.88 MB)
 - ✅ **polymarket_bot** (0.0 MB)
 - ✅ **blofin_bot** (0.01 MB)
 - ✅ **clawbot** (0.0 MB)

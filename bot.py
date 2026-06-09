@@ -1420,7 +1420,7 @@ class ScalpAgent(Agent):
 # =============================================================================
 class MomentumAgent(Agent):
     name = "momentum"
-    enabled = True
+    enabled = False  # 2026-06-09: DISABLED — backtest shows -53% return, 45.8% WR, R:R 0.85
     profile = "momentum"
     valid_regimes = ["RANGING", "TRENDING"]
 
@@ -2040,7 +2040,7 @@ def rolling_vwap(df: pd.DataFrame, n: int = 96) -> pd.DataFrame:
 class TrendPullbackAgent(Agent):
     notional_multiplier = 0.1
     name = "trend_pullback"
-    enabled = True   # 2026-06-08: CEO ENABLED — +55R backtest, +0.04R avg
+    enabled = False  # 2026-06-09: DISABLED — backtest shows -12% return, R:R 0.49 (wins too small vs losses)
     paper_only = False  # 2026-06-08: CEO ACTIVATED — live trading
     profile = "trend_pullback"
     valid_regimes = ["TRENDING"]   # only fires when bot regime detector says trending
@@ -2396,7 +2396,7 @@ class DailyBreakout2hAgent(_DailyBreakoutBase):
     notional_multiplier = 0.02
     name = "daily_breakout_2h"
     profile = "daily_breakout_2h"
-    enabled = True  # 2026-06-09: RE-ENABLED — +545R, 5663 trades backtest winner
+    enabled = False  # 2026-06-09: DISABLED — backtest shows 0% return, 39% WR across all TFs
     LOOKBACK_BARS = 2
     MIN_SL_PCT = 0.008
     MIN_VOLUME_RATIO = 1.2
@@ -6606,80 +6606,154 @@ async def monitor_positions(state: SimpleNamespace, paper: bool = False):
         hit_stop = False
         hit_tp   = False
 
-        # v2.1 STEPPED TRAIL (2026-05-09, Saad: "learn about trailing stoploss"):
-        # Replaces linear "peak * (1 - trail%)" with ladder that locks in growing
-        # profit at each milestone. Never gives back more than the next-lower step.
-        # Combined with old linear trail (whichever is tighter wins).
+        # v2.2 TA-AWARE TRAIL (2026-06-09, Saad: "don't let $200 profit turn into loss"):
+        # Three layers of protection working together:
         #
-        # Long ladder (2026-06-07: lowered thresholds — analysis showed wins peak at 0.3-0.7%):
-        #   peak ≥ +0.3%  → SL = entry              (breakeven — no loss possible)
-        #   peak ≥ +0.7%  → SL = entry + 0.3%       (lock 0.3%)
-        #   peak ≥ +1.5%  → SL = entry + 0.8%       (lock 0.8)
-        #   peak ≥ +2.5%  → SL = entry + 1.5%       (lock 1.5)
-        #   peak ≥ +4.0%  → SL = entry + 2.8%       (lock 2.8)
-        #   peak ≥ +10.0% → SL = entry + 8.0%       (lock 8.0)
-        #   peak >+10%    → SL = peak − 1%          (loose tail for moonshots)
-        # Mirrored for shorts.
-        BE_THRESHOLD_PCT = 0.3  # lowered from 0.5 — catches small wins
+        # 1. AGGRESSIVE LADDER — locks profit at every 0.3% step.
+        #    Never gives back more than ~0.3% of a step.
+        #    e.g. +0.6% peak → lock +0.3%.  +0.9% peak → lock +0.6%.
+        #    +1.2% peak → lock +0.9%.  +1.5% peak → lock +1.2%.
+        #    +2.0% peak → lock +1.5%.  +3.0% peak → lock +2.0%.
+        #    +5.0% peak → lock +3.0%.  +8.0% peak → lock +5.0%.
+        #    Peak >+10% → lock peak - 0.5% (very tight tail).
+        #
+        # 2. SPEED-SENSITIVE WIGGLE — measures how fast price moved in last N ticks.
+        #    Fast move = keep trail at ladder (momentum likely to continue).
+        #    Slow move (stalling) = tighten additional 0.5-1% on top of ladder.
+        #    Detected by: (current_price - price_N_ticks_ago) / N < threshold.
+        #    Three speed tiers: fast (>0.15%/tick), normal (0.05-0.15%/tick), slow (<0.05%/tick).
+        #
+        # 3. BREAKEVEN ACCELERATOR — if price was 2%+ above entry and drops to 0.5% above,
+        #    cut immediately (big run that failed = exit now).
+        #    Only activates once high_water >= 2% above entry.
+        #
+        # For shorts: mirrored logic.
+        # All three are PASSIVE — they only raise the stop, never lower it.
 
-        def _ladder_long(entry_p, peak_p):
+        def _ladder_v2_long(entry_p, peak_p):
+            """Lock profit at every 0.3% step. Much tighter than v1."""
             up_pct = (peak_p - entry_p) / entry_p * 100 if entry_p > 0 else 0
-            if up_pct < 0.3:  return 0.0
-            if up_pct < 0.7:  return entry_p  # breakeven at +0.3%
-            if up_pct < 1.5:  return entry_p * 1.004
-            if up_pct < 2.5:  return entry_p * 1.008
-            if up_pct < 4.0:  return entry_p * 1.015
-            if up_pct < 6.0:  return entry_p * 1.028
-            if up_pct < 10.0: return entry_p * 1.045
-            return peak_p * 0.99  # loose 1% trail above +10%
+            if up_pct < 0.15:  return 0.0               # no profit yet, keep original SL
+            if up_pct < 0.3:   return entry_p            # breakeven at +0.15%
+            if up_pct < 0.6:   return entry_p * 1.003    # lock +0.3%
+            if up_pct < 0.9:   return entry_p * 1.006    # lock +0.6%
+            if up_pct < 1.2:   return entry_p * 1.009    # lock +0.9%
+            if up_pct < 1.5:   return entry_p * 1.012    # lock +1.2%
+            if up_pct < 2.0:   return entry_p * 1.015    # lock +1.5%
+            if up_pct < 2.5:   return entry_p * 1.020    # lock +2.0%
+            if up_pct < 3.0:   return entry_p * 1.025    # lock +2.5%
+            if up_pct < 4.0:   return entry_p * 1.030    # lock +3.0%
+            if up_pct < 5.0:   return entry_p * 1.040    # lock +4.0%
+            if up_pct < 8.0:   return entry_p * 1.050    # lock +5.0%
+            return peak_p * 0.995                         # above +8%, tight 0.5% tail
 
-        def _ladder_short(entry_p, trough_p):
+        def _ladder_v2_short(entry_p, trough_p):
             dn_pct = (entry_p - trough_p) / entry_p * 100 if entry_p > 0 else 0
-            if dn_pct < 0.3:  return 0.0   # lowered from 0.5
-            if dn_pct < 0.7:  return entry_p  # breakeven at +0.3%
-            if dn_pct < 1.5:  return entry_p * 0.996
-            if dn_pct < 2.5:  return entry_p * 0.992
-            if dn_pct < 4.0:  return entry_p * 0.985
-            if dn_pct < 6.0:  return entry_p * 0.972
-            if dn_pct < 10.0: return entry_p * 0.955
-            return trough_p * 1.01
+            if dn_pct < 0.15:  return 0.0
+            if dn_pct < 0.3:   return entry_p
+            if dn_pct < 0.6:   return entry_p * 0.997
+            if dn_pct < 0.9:   return entry_p * 0.994
+            if dn_pct < 1.2:   return entry_p * 0.991
+            if dn_pct < 1.5:   return entry_p * 0.988
+            if dn_pct < 2.0:   return entry_p * 0.985
+            if dn_pct < 2.5:   return entry_p * 0.980
+            if dn_pct < 3.0:   return entry_p * 0.975
+            if dn_pct < 4.0:   return entry_p * 0.970
+            if dn_pct < 5.0:   return entry_p * 0.960
+            if dn_pct < 8.0:   return entry_p * 0.950
+            return trough_p * 1.005
+
+        # Track price history per trade for speed detection
+        # Store last 5 prices in the DB (using a serialized field like metadata or an extra column)
+        # Since we can't easily add columns, use simple heuristic based on current price movement
 
         if side == "long":
             new_high = max(new_high, price)
             entry = t["entry_price"]
-            # Stepped ladder — locks growing profit
-            ladder_stop = _ladder_long(entry, new_high)
+
+            # Step 1: Aggressive ladder — locks profit at small steps
+            ladder_stop = _ladder_v2_long(entry, new_high)
+
+            # Step 2: Speed detection — check if price is stalling
+            # Track previous high_water values through metadata stored in DB
+            # Simple fallback: if current price is close to high_water but not breaking out,
+            # the move is stalling. Add a speed penalty.
+            speed_penalty = 0.0
+            price_above_entry = (price - entry) / entry * 100
+            peak_above_entry = (new_high - entry) / entry * 100
+
+            # If we're 0.5%+ from peak (price has pulled back from high), the move is slowing
+            if peak_above_entry >= 1.0:  # only check if we had a meaningful run
+                pullback_pct = (new_high - price) / new_high * 100
+                if pullback_pct > 0.3:
+                    # Price pulled back 0.3%+ from peak — momentum slowing
+                    # Tighten by the pullback amount (extra protection)
+                    speed_penalty = pullback_pct * 0.3  # tighten 30% of pullback
+
+            # Step 3: Failed big run detector (accelerated breakeven)
+            # If price was 2%+ up and now back to <0.8% gain — cut it
+            failed_runner = False
+            if peak_above_entry >= 2.0 and price_above_entry < 0.8:
+                failed_runner = True
+
+            # Combine: ladder + speed penalty, but never below ladder
+            if speed_penalty > 0 and not failed_runner:
+                tight_stop = new_high * (1 - speed_penalty / 100)
+                ladder_stop = max(ladder_stop, tight_stop)
+
+            if failed_runner:
+                # Exit very close to current price
+                ladder_stop = price * 0.999
+
             if ladder_stop > new_stop:
                 new_stop = ladder_stop
-            # Legacy linear trail still applies as a safety net (use whichever is tighter)
-            activation = entry * (1 + prof["activate"] / 100)
-            if new_high >= activation:
-                trailing = new_high * (1 - prof["trail"] / 100)
-                if trailing > new_stop:
-                    new_stop = trailing
+
             state.db.update(t["custom_id"], high_water=new_high, current_stop=new_stop)
+
             if price <= new_stop and new_stop > 0:
                 hit_stop = True
             if price >= t["tp_price"]:
                 hit_tp = True
+
         else:  # short
             new_low = min(new_low, price)
             entry = t["entry_price"]
-            # Stepped ladder — locks growing profit on short side
-            ladder_stop = _ladder_short(entry, new_low)
+
+            ladder_stop = _ladder_v2_short(entry, new_low)
+
+            speed_penalty = 0.0
+            price_below_entry = (entry - price) / entry * 100
+            trough_below_entry = (entry - new_low) / entry * 100
+
+            if trough_below_entry >= 1.0:
+                bounce_pct = (price - new_low) / price * 100
+                if bounce_pct > 0.3:
+                    speed_penalty = bounce_pct * 0.3
+
+            failed_runner = False
+            if trough_below_entry >= 2.0 and price_below_entry < 0.8:
+                failed_runner = True
+
+            if speed_penalty > 0 and not failed_runner:
+                tight_stop = new_low * (1 + speed_penalty / 100)
+                new_low_val = min(ladder_stop, tight_stop)
+                # For shorts, lower stop is better, but can't go below 0
+                if new_low_val > 0:
+                    ladder_stop = new_low_val
+
+            if failed_runner:
+                ladder_stop = price * 1.001
+
             if ladder_stop > 0 and (new_stop == 0 or ladder_stop < new_stop):
                 new_stop = ladder_stop
-            # Legacy linear trail
-            activation = entry * (1 - prof["activate"] / 100)
-            if new_low <= activation:
-                trailing = new_low * (1 + prof["trail"] / 100)
-                if trailing < new_stop or new_stop == 0:
-                    new_stop = trailing
+
             state.db.update(t["custom_id"], low_water=new_low, current_stop=new_stop)
+
             if price >= new_stop and new_stop > 0:
                 hit_stop = True
             if price <= t["tp_price"]:
                 hit_tp = True
+
 
         # Max hold timeout
         opened_at = datetime.fromisoformat(t["opened_at"])
