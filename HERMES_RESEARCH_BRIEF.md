@@ -1,16 +1,16 @@
 # Hermes Research Brief
 
-**Updated:** 2026-06-09T18:54:36.361828+00:00
+**Updated:** 2026-06-09T19:05:50.319617+00:00
 **Macro bias:** neutral
 
-**Market Read:** Neutral macro, mixed signals — BTC accumulation vs. AAVE weakness.
+**MARKET READ:** Neutral macro, mixed signals — BTC accumulation vs AAVE weakness.
 
-**Coins to Watch:**
-- **ENA** (+0.33) — Janus Henderson backing; institutional demand catalyst.
-- **AAVE** (-0.67) — Down 2.6% with broad selloff; watch for reversal or further drop.
-- **BTC** (+0.33) — Strategy buys 1,550 BTC; supports price floor.
+**COINS TO WATCH:**
+- **ENA** (+0.33) — Janus Henderson backing. Institutional demand rising.
+- **BTC** (+0.33) — Strategy buys 1,550 BTC. Bullish accumulation signal.
+- **AAVE** (-0.67) — Down 2.6% with all CoinDesk 20 red. Weakness may spread.
 
-**Risk to Avoid:** Live edge bots all losing (total -$11.3). Avoid chasing micro-moves — no edge today.
+**RISK TO AVOID:** Agents show three losing trades (wide_scalp -$7.9). Avoid chasing momentum — edges are failing.
 
 BIAS: neutral
 
