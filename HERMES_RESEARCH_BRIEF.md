@@ -1,16 +1,16 @@
 # Hermes Research Brief
 
-**Updated:** 2026-06-09T15:43:32.984088+00:00
+**Updated:** 2026-06-09T16:04:36.799921+00:00
 **Macro bias:** neutral
 
-**MARKET READ:** Macro neutral, BTC positive news offset by weak altcoin momentum.
+**MARKET READ:** Macro neutral, BTC positive news but agents bleeding — chop risk high.
 
 **COINS TO WATCH:**
-- **ENA** (+0.33 score) — Janus Henderson backing is a strong institutional signal; watch for USDe distribution catalyst.
-- **BTC** (+0.42, 4 hits) — Saylor’s $2.13B buy and Trump Davos boost support upside; key resistance levels in play.
-- **AAVE** (-0.67) — Down 2.6% with no positive catalyst; avoid until trend reverses.
+- **ENA** (+0.33 score) — Janus Henderson backing is real institutional flow. Watch for USDe distribution catalyst.
+- **BTC** (+0.42, 4 hits) — Saylor’s $2.13B buy + Trump Davos bump. Still bid under macro neutral.
+- **AAVE** (-0.67) — Down 2.6% with no fresh bad news. Could be a dip buy if BTC holds.
 
-**RISK:** Agents show 0% win rate and negative P&L ($-11.3 total) — avoid chasing momentum; tight stops needed.
+**RISK TO AVOID:** All 3 agents losing money today (wide_scalp -$7.9). Don’t chase micro moves — wait for liquidity sweep confirmation.
 
 BIAS: neutral
 

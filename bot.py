@@ -1165,8 +1165,13 @@ class BloFin:
                     return {"error": "limit-only enforced: no limit_price provided", "code": "LIMIT_REQUIRED"}
                 order_type_use = "limit"
                 price_use = round(float(limit_price), 6)
+                # Ensure symbol has dash (BloFin format: BTC-USDT not BTCUSDT)
+                trade_symbol = symbol
+                if "-" not in symbol and len(symbol) > 6:
+                    if symbol.endswith("USDT"): trade_symbol = symbol[:-4] + "-USDT"
+                    elif symbol.endswith("USDC"): trade_symbol = symbol[:-4] + "-USDC"
                 res = self.client.trading.place_order(
-                    inst_id       = symbol,
+                    inst_id       = trade_symbol,
                     margin_mode   = self.margin_mode,
                     position_side = self._pos_side_for_open(side),
                     side          = side,
@@ -8725,16 +8730,15 @@ async def run(paper: bool = False, once: bool = False):
     # pnl != 0. 26 agents had zero fills lifetime — removing from registry.
     # To re-enable any of these, delete the name from DEAD_AGENT_PURGE.
     DEAD_AGENT_PURGE = {
-        # 2026-06-09: Cleaned — only keep truly dead/unused agents.
-        # Winners removed from purge: fib_confluence, liquidity_sweep, wide_scalp,
-        # utbot_mtf, viki, fibonacci (re-enabled by backtest)
+        # 2026-06-09: CEO HARD KILL — these agents NEVER made money.
         "asian_session", "atr_momentum",
         "candlestick",
         "daily_breakout_7d",
-        "fib_786_oversold", "fib_hotzone",
+        "fib_786_oversold", "fib_hotzone", "fib_confluence",
         "funding_fade_v2", "funding_extremes",
         "golden_cross", "golden_hour",
         "kalman_trend", "keltner_squeeze",
+        "liquidity_sweep", "wide_scalp", "utbot_mtf",
         "metals_scalp", "multi_confluence",
         "news",
         "pump_dump_reversal",
