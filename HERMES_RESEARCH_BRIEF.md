@@ -1,16 +1,16 @@
 # Hermes Research Brief
 
-**Updated:** 2026-06-09T02:09:09.389968+00:00
+**Updated:** 2026-06-09T02:19:21.144374+00:00
 **Macro bias:** neutral
 
-**Market Read:** Mixed signals — macro neutral, BTC news positive, but agent losses suggest caution.
+**MARKET READ:** Mixed signals – macro neutral, BTC news positive, but our agents show net losses.
 
-**Coins to Watch:**
-- **NEAR:** +12.3% gain, strong headline score (+0.67). Momentum play.
-- **BTC:** Saylor bought $2.13B, Trump boost. Big money flowing in.
-- **AAVE:** Survived $8.45B bank run. Negative score (-0.33) but resilience narrative.
+**COINS TO WATCH:**
+- **NEAR:** +12.3% gain, strong headline score +0.67. Momentum play.
+- **AAVE:** -0.33 score, but $8.45B bank run defended. Watch for dip or recovery.
+- **BTC:** Saylor bought $2.13B. Trump boost. High volume, but agent losses suggest caution.
 
-**Risk to Avoid:** Hermes master agent down -$8.7. Avoid chasing breakouts — daily_breakout_24h lost -$10.9.
+**RISK TO AVOID:** Our master agent lost -$8.7. Avoid chasing breakouts – daily_breakout_24h lost -$10.9. Stick to short-term signals.
 
 BIAS: neutral
 

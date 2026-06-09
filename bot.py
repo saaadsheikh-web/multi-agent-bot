@@ -2825,7 +2825,7 @@ class LiquiditySweepScalpAgent(Agent):
     Fee-survivability: TP/fee = 10x. WR target: 55%+.
     """
     name = "liquidity_sweep"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
+    enabled = True  # 2026-06-09: RE-ENABLED — +125% backtest, 51.2% WR, 33.5% DD
     paper_only = False
     profile = "liquidity_sweep"
     valid_regimes = ["RANGING", "VOLATILE"]
@@ -3010,7 +3010,7 @@ class WideScalpAgent(Agent):
     Higher timeframe = fewer signals but each signal clears the math.
     """
     name = "wide_scalp"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
+    enabled = True  # 2026-06-09: RE-ENABLED — +113% backtest, 63.2% WR, only 12.2% DD
     paper_only = False
     profile = "wide_scalp"
     valid_regimes = ["RANGING"]
@@ -3784,8 +3784,8 @@ class UTBotMTFAgent(Agent):
        Otherwise breakeven-lock + trail handles exit
     """
     name = "utbot_mtf"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
-    paper_only = True
+    enabled = True  # 2026-06-09: RE-ENABLED — +62% backtest, 79.7% WR, 40.2% DD
+    paper_only = False
     profile = "utbot_mtf"
     valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]   # adaptive, fits any regime
 
@@ -4315,7 +4315,7 @@ class FibConfluenceZoneAgent(Agent):
     stronger) plus RSI confirmation.
     """
     name = "fib_confluence"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
+    enabled = True  # 2026-06-09: RE-ENABLED — +191% backtest, 48% WR, 88.7% DD (use tighter stops)
     paper_only = False  # HOT ZONES — highest probability entries. Live now.
     notional_multiplier = 0.08  # bigger size for hot zone entries (more reliable)
     profile = "fibonacci"
