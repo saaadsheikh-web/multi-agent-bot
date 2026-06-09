@@ -3570,7 +3570,7 @@ class MathMasterAgent(Agent):
     """Advanced math agent — entropy, bayes, monte carlo, max entropy."""
     notional_multiplier = 0.03
     name = "math_master"
-    enabled = True  # 2026-06-09: NEW — 4-layer math fusion agent
+    enabled = False  # DISABLED — backtest showed 0 predictive power
     paper_only = False
     profile = "daily_breakout"  # wide stops, trailing only
     valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
@@ -5663,7 +5663,7 @@ class QuantumMasterAgent(Agent):
     """Deepest math agent — chaos theory, Wasserstein, spectral entropy, DFA, Fisher info, Rényi entropy."""
     notional_multiplier = 0.02
     name = "quantum_master"
-    enabled = True  # 2026-06-09: NEW — 6-layer quantum math fusion
+    enabled = False  # DISABLED — backtest showed 0 predictive power
     paper_only = False
     profile = "daily_breakout"
     valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
