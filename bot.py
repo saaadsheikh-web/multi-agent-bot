@@ -8721,24 +8721,25 @@ async def run(paper: bool = False, once: bool = False):
     # pnl != 0. 26 agents had zero fills lifetime — removing from registry.
     # To re-enable any of these, delete the name from DEAD_AGENT_PURGE.
     DEAD_AGENT_PURGE = {
-        # 2026-06-08: CEO RE-ENABLED winners. Keeping only proven losers.
+        # 2026-06-09: Cleaned — only keep truly dead/unused agents.
+        # Winners removed from purge: fib_confluence, liquidity_sweep, wide_scalp,
+        # utbot_mtf, viki, fibonacci (re-enabled by backtest)
         "asian_session", "atr_momentum",
         "candlestick",
         "daily_breakout_7d",
-        "fib_786_oversold", "fib_hotzone", "fibonacci", "fib_confluence",
+        "fib_786_oversold", "fib_hotzone",
         "funding_fade_v2", "funding_extremes",
         "golden_cross", "golden_hour",
         "kalman_trend", "keltner_squeeze",
-        "liquidity_sweep",
         "metals_scalp", "multi_confluence",
         "news",
         "pump_dump_reversal",
         "raschke_retest", "rsi_divergence",
         "short_bias", "smart_scalp", "stoch_rsi", "supertrend",
         "tv_fibonacci",
-        "us_open", "utbot_mtf", "utbot_v3",
+        "us_open", "utbot_v3",
         "volume_profile",
-        "whale", "wide_candle", "wide_scalp", "williams_r",
+        "whale", "wide_candle", "williams_r",
         "xmr_meanrev",
     }
     pre_purge_count = len(agents)
