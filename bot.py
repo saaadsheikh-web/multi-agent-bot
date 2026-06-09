@@ -8831,16 +8831,17 @@ async def run(paper: bool = False, once: bool = False):
             supervised(lambda: reconcile_loop(state), "reconcile_loop"),
             supervised(lambda: watchdog_loop(state), "watchdog_loop"),
             supervised(lambda: health_loop(state), "health_loop"),
-            supervised(lambda: hermes_loop(state), "hermes_loop"),
+        # Disabled: hermes_bridge, big_boss, free_brain, knowledge deleted in cleanup.
+        # supervised(lambda: hermes_loop(state), "hermes_loop"),
             supervised(lambda: _hermes_telegram_loop_factory(), "hermes_telegram_loop"),
             supervised(lambda: restart_watch_loop(state), "restart_watch_loop"),
             supervised(market_context_loop, "market_context_loop"),
             supervised(lambda: research_brief_loop(state), "research_brief_loop"),
             supervised(eod_recap_loop, "eod_recap_loop"),
             supervised(local_status_loop, "local_status_loop"),
-            supervised(_big_boss_loop, "big_boss_loop"),
-            supervised(_knowledge_loop, "knowledge_loop"),
-            supervised(_free_brain_loop, "free_brain_loop"),
+        # Disabled (files deleted): supervised(lambda: _big_boss_loop, "big_boss_loop"),
+        # supervised(lambda: _knowledge_loop, "knowledge_loop"),
+        # supervised(lambda: _free_brain_loop, "free_brain_loop"),
             # in 5s without killing the rest of the bot.
             supervised(lambda: webhook_loop(state), "webhook_loop"),
         )
