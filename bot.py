@@ -7483,7 +7483,7 @@ async def _tv_handle(request: "aiohttp.web.Request", state) -> "aiohttp.web.Resp
     agent_name = strategy.replace("_long","").replace("_short","")
     sig = Signal(
         agent=f"tv_{agent_name}",
-        symbol=normalized_symbol,
+        symbol=symbol,
         side=side_raw,
         confidence=confidence,
         profile=profile,
