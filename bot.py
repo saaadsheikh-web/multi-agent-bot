@@ -365,7 +365,7 @@ PROFILES = {
     "daily_breakout_48h": {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 2880},
     "daily_breakout_7d":  {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080},
     # WIDENED 2026-06-03: trail 0.4→1.0, activate 0.4→1.0
-    "daily_breakout_2h":  {"tp": 99.0, "sl": 0.8, "trail": 1.0, "activate": 1.0, "max_hold_min": 180},
+    "daily_breakout_2h":  {"tp": 99.0, "sl": 0.8, "trail": 3.0, "activate": 1.0, "max_hold_min": 180},
     "daily_breakout_8h":  {"tp": 99.0, "sl": 1.5, "trail": 0.8, "activate": 0.8, "max_hold_min": 480},
     # New mechanisms (2026-05-01 build):
     "supertrend":         {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 4320},
@@ -2396,12 +2396,12 @@ class DailyBreakout2hAgent(_DailyBreakoutBase):
     notional_multiplier = 0.02
     name = "daily_breakout_2h"
     profile = "daily_breakout_2h"
-    enabled = False  # 2026-06-05: KILLED — 2t +$0.22, waste of CPU per memory
+    enabled = True  # 2026-06-09: RE-ENABLED — +545R, 5663 trades backtest winner
     LOOKBACK_BARS = 2
     MIN_SL_PCT = 0.008
     MIN_VOLUME_RATIO = 1.2
     ATR_MULT = 1.0
-    paper_only = True  # disabled v2.0 2026-05-07: redundant variant, kept 4h only
+    paper_only = False  # 2026-06-09: RE-ENABLED — +545R backtest
 
 
 class DailyBreakout8hAgent(_DailyBreakoutBase):
