@@ -1,0 +1,322 @@
+[
+  {
+    "rank": 1,
+    "strategy": "B4h",
+    "tf": "15m",
+    "trades": 9876,
+    "wr": 18.0,
+    "pnl": 4549.81,
+    "total_r": 3803.98,
+    "profitable": "16/20"
+  },
+  {
+    "rank": 2,
+    "strategy": "B4h",
+    "tf": "1H",
+    "trades": 10002,
+    "wr": 9.1,
+    "pnl": 4530.29,
+    "total_r": 3581.32,
+    "profitable": "16/20"
+  },
+  {
+    "rank": 3,
+    "strategy": "quick_scalp",
+    "tf": "1H",
+    "trades": 8127,
+    "wr": 10.8,
+    "pnl": 4466.54,
+    "total_r": 3544.69,
+    "profitable": "13/20"
+  },
+  {
+    "rank": 4,
+    "strategy": "quick_scalp",
+    "tf": "15m",
+    "trades": 8300,
+    "wr": 10.5,
+    "pnl": 2151.5,
+    "total_r": 3310.8,
+    "profitable": "15/20"
+  },
+  {
+    "rank": 5,
+    "strategy": "B4h",
+    "tf": "30m",
+    "trades": 9698,
+    "wr": 13.3,
+    "pnl": 3137.88,
+    "total_r": 2615.35,
+    "profitable": "13/20"
+  },
+  {
+    "rank": 6,
+    "strategy": "quick_scalp",
+    "tf": "30m",
+    "trades": 8162,
+    "wr": 11.3,
+    "pnl": 2255.71,
+    "total_r": 2466.09,
+    "profitable": "12/20"
+  },
+  {
+    "rank": 7,
+    "strategy": "B8h",
+    "tf": "15m",
+    "trades": 7464,
+    "wr": 20.9,
+    "pnl": 3528.27,
+    "total_r": 2358.66,
+    "profitable": "17/20"
+  },
+  {
+    "rank": 8,
+    "strategy": "B8h",
+    "tf": "1H",
+    "trades": 7491,
+    "wr": 10.7,
+    "pnl": 3563.38,
+    "total_r": 2260.79,
+    "profitable": "13/20"
+  },
+  {
+    "rank": 9,
+    "strategy": "B12h",
+    "tf": "15m",
+    "trades": 6128,
+    "wr": 24.4,
+    "pnl": 3599.57,
+    "total_r": 2002.39,
+    "profitable": "17/20"
+  },
+  {
+    "rank": 10,
+    "strategy": "B4h",
+    "tf": "5m",
+    "trades": 10249,
+    "wr": 23.2,
+    "pnl": 2329.85,
+    "total_r": 1957.19,
+    "profitable": "15/20"
+  },
+  {
+    "rank": 11,
+    "strategy": "B12h",
+    "tf": "1H",
+    "trades": 6145,
+    "wr": 12.5,
+    "pnl": 3611.83,
+    "total_r": 1933.73,
+    "profitable": "13/20"
+  },
+  {
+    "rank": 12,
+    "strategy": "B8h",
+    "tf": "30m",
+    "trades": 7272,
+    "wr": 15.8,
+    "pnl": 2651.34,
+    "total_r": 1764.65,
+    "profitable": "12/20"
+  },
+  {
+    "rank": 13,
+    "strategy": "B8h",
+    "tf": "5m",
+    "trades": 7758,
+    "wr": 28.0,
+    "pnl": 2408.83,
+    "total_r": 1612.71,
+    "profitable": "15/20"
+  },
+  {
+    "rank": 14,
+    "strategy": "B24h",
+    "tf": "1H",
+    "trades": 3897,
+    "wr": 17.2,
+    "pnl": 3637.78,
+    "total_r": 1432.97,
+    "profitable": "16/20"
+  },
+  {
+    "rank": 15,
+    "strategy": "B12h",
+    "tf": "30m",
+    "trades": 6053,
+    "wr": 18.6,
+    "pnl": 2408.9,
+    "total_r": 1335.38,
+    "profitable": "13/20"
+  },
+  {
+    "rank": 16,
+    "strategy": "quick_scalp",
+    "tf": "5m",
+    "trades": 8414,
+    "wr": 9.3,
+    "pnl": 551.58,
+    "total_r": 1326.34,
+    "profitable": "12/20"
+  },
+  {
+    "rank": 17,
+    "strategy": "B12h",
+    "tf": "5m",
+    "trades": 6395,
+    "wr": 31.8,
+    "pnl": 2374.9,
+    "total_r": 1322.07,
+    "profitable": "15/20"
+  },
+  {
+    "rank": 18,
+    "strategy": "B24h",
+    "tf": "15m",
+    "trades": 4078,
+    "wr": 31.4,
+    "pnl": 2814.64,
+    "total_r": 1126.03,
+    "profitable": "15/20"
+  },
+  {
+    "rank": 19,
+    "strategy": "B48h",
+    "tf": "1H",
+    "trades": 2584,
+    "wr": 19.0,
+    "pnl": 2682.06,
+    "total_r": 886.41,
+    "profitable": "15/20"
+  },
+  {
+    "rank": 20,
+    "strategy": "B48h",
+    "tf": "15m",
+    "trades": 2741,
+    "wr": 36.3,
+    "pnl": 2453.12,
+    "total_r": 817.69,
+    "profitable": "14/20"
+  },
+  {
+    "rank": 21,
+    "strategy": "B24h",
+    "tf": "30m",
+    "trades": 3949,
+    "wr": 24.0,
+    "pnl": 1778.9,
+    "total_r": 709.88,
+    "profitable": "11/20"
+  },
+  {
+    "rank": 22,
+    "strategy": "B24h",
+    "tf": "5m",
+    "trades": 4268,
+    "wr": 37.8,
+    "pnl": 1661.31,
+    "total_r": 664.61,
+    "profitable": "14/20"
+  },
+  {
+    "rank": 23,
+    "strategy": "B48h",
+    "tf": "5m",
+    "trades": 2881,
+    "wr": 41.8,
+    "pnl": 1266.66,
+    "total_r": 422.2,
+    "profitable": "13/20"
+  },
+  {
+    "rank": 24,
+    "strategy": "B48h",
+    "tf": "30m",
+    "trades": 2673,
+    "wr": 26.4,
+    "pnl": 1070.44,
+    "total_r": 356.57,
+    "profitable": "10/20"
+  },
+  {
+    "rank": 25,
+    "strategy": "fib_B12h",
+    "tf": "1H",
+    "trades": 109,
+    "wr": 13.8,
+    "pnl": 216.05,
+    "total_r": 116.05,
+    "profitable": "10/20"
+  },
+  {
+    "rank": 26,
+    "strategy": "fib_B24h",
+    "tf": "1H",
+    "trades": 109,
+    "wr": 16.5,
+    "pnl": 278.69,
+    "total_r": 111.56,
+    "profitable": "11/20"
+  },
+  {
+    "rank": 27,
+    "strategy": "fib_B12h",
+    "tf": "15m",
+    "trades": 99,
+    "wr": 24.2,
+    "pnl": 111.01,
+    "total_r": 61.9,
+    "profitable": "12/19"
+  },
+  {
+    "rank": 28,
+    "strategy": "fib_B24h",
+    "tf": "15m",
+    "trades": 96,
+    "wr": 31.2,
+    "pnl": 122.7,
+    "total_r": 49.09,
+    "profitable": "9/19"
+  },
+  {
+    "rank": 29,
+    "strategy": "fib_B12h",
+    "tf": "30m",
+    "trades": 97,
+    "wr": 16.5,
+    "pnl": 20.56,
+    "total_r": 7.02,
+    "profitable": "11/20"
+  },
+  {
+    "rank": 30,
+    "strategy": "fib_B24h",
+    "tf": "30m",
+    "trades": 97,
+    "wr": 19.6,
+    "pnl": -7.14,
+    "total_r": -4.51,
+    "profitable": "10/20"
+  },
+  {
+    "rank": 31,
+    "strategy": "fib_B12h",
+    "tf": "5m",
+    "trades": 139,
+    "wr": 28.8,
+    "pnl": -38.86,
+    "total_r": -19.0,
+    "profitable": "9/20"
+  },
+  {
+    "rank": 32,
+    "strategy": "fib_B24h",
+    "tf": "5m",
+    "trades": 135,
+    "wr": 31.9,
+    "pnl": -64.45,
+    "total_r": -25.7,
+    "profitable": "7/20"
+  }
+]

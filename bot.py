@@ -6434,10 +6434,14 @@ async def ai_arbiter(session: aiohttp.ClientSession, sig: "Signal",
         result = await _arbiter_via_max_sdk(sig, ctx_summary)
         if result is not None:
             return result
-    # Tier-4: OpenRouter (paid per call)
-    if OPENROUTER_API_KEY:
-        return await _arbiter_via_openrouter(session, sig, ctx_summary)
-    return True, "no-ai-configured"
+    # Tier-4: OpenRouter (paid per call) — DISABLED 2026-06-09: keys expired, DeepSeek alone is enough.
+    # Fallback: auto-approve high confidence, reject low. Same logic as OpenRouter exhaust.
+    if sig.confidence >= 8:
+        return True, "deepseek-exhausted-high-conf"
+    elif sig.confidence >= 6:
+        return True, "deepseek-exhausted-mid-conf"
+    else:
+        return False, "deepseek-exhausted-low-conf"
 
 
 # =============================================================================
