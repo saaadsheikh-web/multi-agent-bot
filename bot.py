@@ -341,7 +341,7 @@ PROFILES = {
     "meanrev":     {"tp": 4.0,  "sl": 3.0,  "trail": 2.5,  "activate": 3.0,  "max_hold_min": 480},
     "whale":       {"tp": 2.0,  "sl": 1.0,  "trail": 0.8,  "activate": 0.6,  "max_hold_min": 180},
     "news":        {"tp": 2.5,  "sl": 1.2,  "trail": 1.0,  "activate": 0.7,  "max_hold_min": 240},
-    "asymmetric":  {"tp": 3.0,  "sl": 1.0,  "trail": 0.5,  "activate": 2.0,  "max_hold_min": 720},
+    "asymmetric":  {"tp": 99.0,  "sl": 4.0,  "trail": 2.0,  "activate": 1.0,  "max_hold_min": 1440, "atr_trail": 1.2},
     # New paper agent profiles
     "funding_v2":         {"tp": 4.0, "sl": 3.0, "trail": 1.5, "activate": 2.0, "max_hold_min": 480},
     "short_bias":         {"tp": 3.0, "sl": 2.5, "trail": 1.0, "activate": 1.5, "max_hold_min": 360},
@@ -356,13 +356,13 @@ PROFILES = {
     # long max-hold to let winners run multi-day in strong trends.
     "trend_pullback": {"tp": 99.0, "sl": 2.5, "trail": 1.5, "activate": 1.5, "max_hold_min": 5760},
     # Daily range breakout: very wide stops, fee-immune, trailing only
-    "daily_breakout": {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080},
+    "daily_breakout": {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080, "atr_trail": 1.5},
     # WIDENED 2026-06-03: trail 1.2→2.0, activate 2.0→2.5
-    "daily_breakout_24h": {"tp": 99.0, "sl": 3.5, "trail": 5.0, "activate": 2.0, "max_hold_min": 1440},
+    "daily_breakout_24h": {"tp": 99.0, "sl": 3.5, "trail": 5.0, "activate": 2.0, "max_hold_min": 1440, "atr_trail": 1.5},
     # WIDENED 2026-06-03: trail 0.6→1.2, activate 1.5→2.0
-    "daily_breakout_4h":  {"tp": 99.0, "sl": 2.5, "trail": 3.0, "activate": 1.5, "max_hold_min": 360},
-    "daily_breakout_12h": {"tp": 99.0, "sl": 1.8, "trail": 3.0, "activate": 1.5, "max_hold_min": 720},
-    "daily_breakout_48h": {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 2880},
+    "daily_breakout_4h":  {"tp": 99.0, "sl": 2.5, "trail": 3.0, "activate": 1.5, "max_hold_min": 360, "atr_trail": 1.5},
+    "daily_breakout_12h": {"tp": 99.0, "sl": 1.8, "trail": 3.0, "activate": 1.5, "max_hold_min": 720, "atr_trail": 1.5},
+    "daily_breakout_48h": {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 2880, "atr_trail": 1.5},
     "daily_breakout_7d":  {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080},
     # WIDENED 2026-06-03: trail 0.4→1.0, activate 0.4→1.0
     "daily_breakout_2h":  {"tp": 99.0, "sl": 0.8, "trail": 3.0, "activate": 1.0, "max_hold_min": 180},
@@ -384,7 +384,7 @@ PROFILES = {
     "golden_cross":       {"tp": 99.0, "sl": 5.0, "trail": 2.5, "activate": 2.5, "max_hold_min": 14400},
     # 2026-05-01 SCALPING WAVE — fee-aware, math-disciplined
     # Trailing-only — let winners run, don't book small profit (Saad's directive)
-    "liquidity_sweep":    {"tp": 99.0, "sl": 1.5, "trail": 0.6, "activate": 1.4, "max_hold_min": 240},
+    "liquidity_sweep":    {"tp": 99.0, "sl": 1.5, "trail": 0.6, "activate": 1.4, "max_hold_min": 240, "atr_trail": 1.0},
     # 2026-05-09 SMART FIX (Saad: "tighter SL hits every time"):
     # Keep SL wide (2.5% → ride out noise) but engage trail SOONER so winners lock.
     # Breakeven at +0.5% already locks zero loss — SL only matters for fast killers.
@@ -393,7 +393,7 @@ PROFILES = {
     # WIDENED 2026-06-03: trail 0.6→1.2, activate 0.8→1.6 (R:R was 0.06R vs -0.125R — losers 2× winners)
     "connors_rsi2":       {"tp": 99.0, "sl": 2.5, "trail": 1.2, "activate": 1.6, "max_hold_min": 360},
     "raschke_retest":     {"tp": 99.0, "sl": 2.0, "trail": 0.7, "activate": 1.6, "max_hold_min": 360},
-    "wide_scalp":         {"tp": 1.2, "sl": 0.6, "trail": 0.4, "activate": 0.4, "max_hold_min": 240},
+    "wide_scalp":         {"tp": 1.2, "sl": 0.6, "trail": 0.4, "activate": 0.4, "max_hold_min": 240, "atr_trail": 0.8},
     # Asymmetric candlestick — 4% wide SL, trailing-only TP, lets winners run
     "wide_candle":        {"tp": 99.0, "sl": 4.0, "trail": 1.5, "activate": 2.0, "max_hold_min": 10080},
     # Larry Williams %R mean-rev with EMA200 trend filter
@@ -411,7 +411,7 @@ PROFILES = {
     # When peak hits +0.5%, stop = entry exactly (breakeven, no loss possible)
     # When peak hits +1.0%, stop = entry +0.5% (locked profit)
     # When peak hits +5.0%, stop = entry +4.5% (winner running)
-    "utbot_mtf":          {"tp": 99.0, "sl": 2.5, "trail": 0.5, "activate": 0.5, "max_hold_min": 1440},
+    "utbot_mtf":          {"tp": 99.0, "sl": 2.5, "trail": 0.5, "activate": 0.5, "max_hold_min": 1440, "atr_trail": 1.2},
     # UT Bot v3: 1H trigger + 15m confirm + 4H HTF filter — slower, higher quality
     "utbot_v3":           {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 2.0, "max_hold_min": 4320},
     # Smart 5m scalper — multi-confluence required (VWAP + RSI + volume + HTF trend)
@@ -421,13 +421,13 @@ PROFILES = {
     # Fibonacci retracement — bounce/rejection at golden-ratio levels
     # WIDENED 2026-05-06: fibonacci wins XPT/GIGGLE deserved bigger TPs.
     # WIDENED 2026-06-03: trail 1.5→3.0, activate 2.0→3.5 (was -0.25R avg)
-    "fibonacci":          {"tp": 99.0, "sl": 3.0, "trail": 3.0, "activate": 3.5, "max_hold_min": 720},
+    "fibonacci":          {"tp": 99.0, "sl": 3.0, "trail": 3.0, "activate": 3.5, "max_hold_min": 720, "atr_trail": 1.0},
     # Viki — triple EMA crossover (9/21/50). Backtested: 15m, 7%SL, trail@3%, 1.5% dist.
     # 81.5% WR, +68% in 63 days with 10× on SOL/TAO/TIA. See backtest_viki.py.
-    "viki":               {"tp": 99.0, "sl": 7.0, "trail": 1.5, "activate": 3.0, "max_hold_min": 5760},
+    "viki":               {"tp": 99.0, "sl": 7.0, "trail": 1.5, "activate": 3.0, "max_hold_min": 5760, "atr_trail": 1.0},
     # 2026-06-03 EXHAUSTIVE BACKTEST WINNER — fib bounce + regime filter
     # 73% profitable cross-validated, SL=7%, trail=5% (wide), risk=2%
-    "fib_bounce":         {"tp": 99.0, "sl": 5.0, "trail": 6.0, "activate": 2.0, "max_hold_min": 5760},
+    "fib_bounce":         {"tp": 99.0, "sl": 5.0, "trail": 6.0, "activate": 2.0, "max_hold_min": 5760, "atr_trail": 1.5},
     # Hermes master composite — multi-agent confluence signals (BB + EMA + FIB + VOL)
     # 2026-06-06: Chart-smart trailing. TrailMaster backtest proves tight trailing loses.
     # Trail only activates at +3%, with 6% distance — only genuine reversals trigger it.
@@ -7287,107 +7287,84 @@ async def monitor_positions(state: SimpleNamespace, paper: bool = False):
         hit_stop = False
         hit_tp   = False
 
-        # v2.2 TA-AWARE TRAIL (2026-06-09, Saad: "don't let $200 profit turn into loss"):
-        # Three layers of protection working together:
+        # v3.0 ATR-BASED TRAIL (2026-06-09, Saad: "tight trails, lock profit, no winners-to-losers"):
+        # Replaces the old 0.3% ladder which had slippage eating profits.
         #
-        # 1. AGGRESSIVE LADDER — locks profit at every 0.3% step.
-        #    Never gives back more than ~0.3% of a step.
-        #    e.g. +0.6% peak → lock +0.3%.  +0.9% peak → lock +0.6%.
-        #    +1.2% peak → lock +0.9%.  +1.5% peak → lock +1.2%.
-        #    +2.0% peak → lock +1.5%.  +3.0% peak → lock +2.0%.
-        #    +5.0% peak → lock +3.0%.  +8.0% peak → lock +5.0%.
-        #    Peak >+10% → lock peak - 0.5% (very tight tail).
-        #
-        # 2. SPEED-SENSITIVE WIGGLE — measures how fast price moved in last N ticks.
-        #    Fast move = keep trail at ladder (momentum likely to continue).
-        #    Slow move (stalling) = tighten additional 0.5-1% on top of ladder.
-        #    Detected by: (current_price - price_N_ticks_ago) / N < threshold.
-        #    Three speed tiers: fast (>0.15%/tick), normal (0.05-0.15%/tick), slow (<0.05%/tick).
-        #
-        # 3. BREAKEVEN ACCELERATOR — if price was 2%+ above entry and drops to 0.5% above,
-        #    cut immediately (big run that failed = exit now).
-        #    Only activates once high_water >= 2% above entry.
-        #
-        # For shorts: mirrored logic.
-        # All three are PASSIVE — they only raise the stop, never lower it.
+        # DESIGN:
+        # - Trailing distance = ATR × profile multiplier (1.0x-1.5x depending on agent type)
+        # - ATR adapts to volatility automatically — tight when calm, wider when wild
+        # - Breakeven at +1.5% profit: once profit is solid, SL moves to entry
+        # - Failed runner: if price hit +3% and dropped back below +1%, exit immediately
+        # - Pullback tighten: if price pulls back 1.0x ATR+ from peak, tighten trail
+        # - Only raises the stop, never lowers it.
 
-        def _ladder_v2_long(entry_p, peak_p):
-            """Lock profit at every 0.3% step. Much tighter than v1."""
-            up_pct = (peak_p - entry_p) / entry_p * 100 if entry_p > 0 else 0
-            if up_pct < 0.15:  return 0.0               # no profit yet, keep original SL
-            if up_pct < 0.3:   return entry_p            # breakeven at +0.15%
-            if up_pct < 0.6:   return entry_p * 1.003    # lock +0.3%
-            if up_pct < 0.9:   return entry_p * 1.006    # lock +0.6%
-            if up_pct < 1.2:   return entry_p * 1.009    # lock +0.9%
-            if up_pct < 1.5:   return entry_p * 1.012    # lock +1.2%
-            if up_pct < 2.0:   return entry_p * 1.015    # lock +1.5%
-            if up_pct < 2.5:   return entry_p * 1.020    # lock +2.0%
-            if up_pct < 3.0:   return entry_p * 1.025    # lock +2.5%
-            if up_pct < 4.0:   return entry_p * 1.030    # lock +3.0%
-            if up_pct < 5.0:   return entry_p * 1.040    # lock +4.0%
-            if up_pct < 8.0:   return entry_p * 1.050    # lock +5.0%
-            return peak_p * 0.995                         # above +8%, tight 0.5% tail
+        # Cache ATR per symbol — reuse the cached 1H candles if available
+        atr_val = None
+        atr_key = f"atr_{sym}"
+        if hasattr(state, '_atr_cache') and atr_key in state._atr_cache:
+            atr_val = state._atr_cache[atr_key]
+        else:
+            try:
+                df1h = bf.candles(sym, "1h", limit=20)
+                if len(df1h) >= 20:
+                    atr_val = float(atr(df1h).iloc[-1])
+                    if not hasattr(state, '_atr_cache'):
+                        state._atr_cache = {}
+                    state._atr_cache[atr_key] = atr_val
+                else:
+                    # Fallback: use 1% of price as rough ATR estimate
+                    atr_val = price * 0.01
+            except:
+                atr_val = price * 0.01
 
-        def _ladder_v2_short(entry_p, trough_p):
-            dn_pct = (entry_p - trough_p) / entry_p * 100 if entry_p > 0 else 0
-            if dn_pct < 0.15:  return 0.0
-            if dn_pct < 0.3:   return entry_p
-            if dn_pct < 0.6:   return entry_p * 0.997
-            if dn_pct < 0.9:   return entry_p * 0.994
-            if dn_pct < 1.2:   return entry_p * 0.991
-            if dn_pct < 1.5:   return entry_p * 0.988
-            if dn_pct < 2.0:   return entry_p * 0.985
-            if dn_pct < 2.5:   return entry_p * 0.980
-            if dn_pct < 3.0:   return entry_p * 0.975
-            if dn_pct < 4.0:   return entry_p * 0.970
-            if dn_pct < 5.0:   return entry_p * 0.960
-            if dn_pct < 8.0:   return entry_p * 0.950
-            return trough_p * 1.005
+        if atr_val is None or atr_val <= 0:
+            atr_val = price * 0.01
 
-        # Track price history per trade for speed detection
-        # Store last 5 prices in the DB (using a serialized field like metadata or an extra column)
-        # Since we can't easily add columns, use simple heuristic based on current price movement
+        atr_pct = (atr_val / price) * 100 if price > 0 else 1.0
 
         if side == "long":
             new_high = max(new_high, price)
             entry = t["entry_price"]
+            peak_pct = (new_high - entry) / entry * 100
+            cur_pct = (price - entry) / entry * 100
 
-            # Step 1: Aggressive ladder — locks profit at small steps
-            ladder_stop = _ladder_v2_long(entry, new_high)
+            # Step 1: ATR-based trailing distance (tightens as profit grows)
+            # Profile dictates base trail multiplier; breakouts wider, scalps tighter
+            trail_mult = prof.get("atr_trail", 1.5)
 
-            # Step 2: Speed detection — check if price is stalling
-            # Track previous high_water values through metadata stored in DB
-            # Simple fallback: if current price is close to high_water but not breaking out,
-            # the move is stalling. Add a speed penalty.
-            speed_penalty = 0.0
-            price_above_entry = (price - entry) / entry * 100
-            peak_above_entry = (new_high - entry) / entry * 100
+            if cur_pct < 0.0:
+                # In loss — keep original SL, let it ride
+                new_stop_candidate = new_stop if new_stop > 0 else 0.0
+            elif cur_pct < 1.5:
+                # Small profit zone — tight ATR trail locks early gains
+                # Trail = 0.6x ATR from peak for tight protection
+                trail_dist = atr_val * 0.6
+                new_stop_candidate = new_high - trail_dist
+            elif cur_pct < 4.0:
+                # Mid profit zone — normal ATR trail, let winners run
+                trail_dist = atr_val * trail_mult
+                new_stop_candidate = new_high - trail_dist
+            else:
+                # Big profit zone — pull SL to breakeven + 1.5% (profit locked)
+                trail_dist = atr_val * trail_mult
+                breakeven_floor = entry * 1.015
+                new_stop_candidate = max(breakeven_floor, new_high - trail_dist)
 
-            # If we're 0.5%+ from peak (price has pulled back from high), the move is slowing
-            if peak_above_entry >= 1.0:  # only check if we had a meaningful run
-                pullback_pct = (new_high - price) / new_high * 100
-                if pullback_pct > 0.3:
-                    # Price pulled back 0.3%+ from peak — momentum slowing
-                    # Tighten by the pullback amount (extra protection)
-                    speed_penalty = pullback_pct * 0.3  # tighten 30% of pullback
+            # Step 2: Failed runner detection
+            # If we hit 3%+ profit and now back below 1%, it failed — exit fast
+            if peak_pct >= 3.0 and cur_pct < 1.0:
+                new_stop_candidate = price * 0.998
 
-            # Step 3: Failed big run detector (accelerated breakeven)
-            # If price was 2%+ up and now back to <0.8% gain — cut it
-            failed_runner = False
-            if peak_above_entry >= 2.0 and price_above_entry < 0.8:
-                failed_runner = True
+            # Step 3: Pullback tighten — if price pulls back 1x ATR from peak,
+            # trail becomes tighter (momentum is dying)
+            pullback = (new_high - price) / atr_val if atr_val > 0 else 0
+            if pullback >= 1.0 and peak_pct >= 2.0:
+                # Tighten to 0.5x ATR from peak
+                new_stop_candidate = max(new_stop_candidate, new_high - atr_val * 0.5)
 
-            # Combine: ladder + speed penalty, but never below ladder
-            if speed_penalty > 0 and not failed_runner:
-                tight_stop = new_high * (1 - speed_penalty / 100)
-                ladder_stop = max(ladder_stop, tight_stop)
-
-            if failed_runner:
-                # Exit very close to current price
-                ladder_stop = price * 0.999
-
-            if ladder_stop > new_stop:
-                new_stop = ladder_stop
+            # Never lower the stop
+            if new_stop_candidate > new_stop:
+                new_stop = new_stop_candidate
 
             state.db.update(t["custom_id"], high_water=new_high, current_stop=new_stop)
 
@@ -7399,34 +7376,35 @@ async def monitor_positions(state: SimpleNamespace, paper: bool = False):
         else:  # short
             new_low = min(new_low, price)
             entry = t["entry_price"]
+            trough_pct = (entry - new_low) / entry * 100
+            cur_pct = (entry - price) / entry * 100
 
-            ladder_stop = _ladder_v2_short(entry, new_low)
+            trail_mult = prof.get("atr_trail", 1.5)
 
-            speed_penalty = 0.0
-            price_below_entry = (entry - price) / entry * 100
-            trough_below_entry = (entry - new_low) / entry * 100
+            if cur_pct < 0.0:
+                new_stop_candidate = new_stop if new_stop > 0 else float('inf')
+            elif cur_pct < 1.5:
+                trail_dist = atr_val * 0.6
+                new_stop_candidate = new_low + trail_dist
+            elif cur_pct < 4.0:
+                trail_dist = atr_val * trail_mult
+                new_stop_candidate = new_low + trail_dist
+            else:
+                trail_dist = atr_val * trail_mult
+                breakeven_ceil = entry * 0.985
+                new_stop_candidate = min(breakeven_ceil, new_low + trail_dist)
 
-            if trough_below_entry >= 1.0:
-                bounce_pct = (price - new_low) / price * 100
-                if bounce_pct > 0.3:
-                    speed_penalty = bounce_pct * 0.3
+            # Failed runner (short)
+            if trough_pct >= 3.0 and cur_pct < 1.0:
+                new_stop_candidate = price * 1.002
 
-            failed_runner = False
-            if trough_below_entry >= 2.0 and price_below_entry < 0.8:
-                failed_runner = True
+            # Bounce back tighten (short)
+            bounce = (price - new_low) / atr_val if atr_val > 0 else 0
+            if bounce >= 1.0 and trough_pct >= 2.0:
+                new_stop_candidate = min(new_stop_candidate, new_low + atr_val * 0.5)
 
-            if speed_penalty > 0 and not failed_runner:
-                tight_stop = new_low * (1 + speed_penalty / 100)
-                new_low_val = min(ladder_stop, tight_stop)
-                # For shorts, lower stop is better, but can't go below 0
-                if new_low_val > 0:
-                    ladder_stop = new_low_val
-
-            if failed_runner:
-                ladder_stop = price * 1.001
-
-            if ladder_stop > 0 and (new_stop == 0 or ladder_stop < new_stop):
-                new_stop = ladder_stop
+            if new_stop_candidate > 0 and (new_stop == 0 or new_stop_candidate < new_stop):
+                new_stop = new_stop_candidate
 
             state.db.update(t["custom_id"], low_water=new_low, current_stop=new_stop)
 
