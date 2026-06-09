@@ -7501,7 +7501,6 @@ async def _tv_handle(request: "aiohttp.web.Request", state) -> "aiohttp.web.Resp
     # Normalize symbol: TradingView sends "BTCUSDT", BloFin expects "BTC-USDT"
     normalized_symbol = symbol
     if "-" not in symbol and len(symbol) > 6:
-        # Insert dash before the last 4 chars (USDT, USDC, BUSD)
         if symbol.endswith("USDT"): normalized_symbol = symbol[:-4] + "-USDT"
         elif symbol.endswith("USDC"): normalized_symbol = symbol[:-4] + "-USDC"
         elif symbol.endswith("BUSD"): normalized_symbol = symbol[:-4] + "-BUSD"
@@ -7510,8 +7509,13 @@ async def _tv_handle(request: "aiohttp.web.Request", state) -> "aiohttp.web.Resp
     tk = next((t for t in tickers if t.get("instId") == normalized_symbol), None)
     live_price = float(tk.get("last", 0)) if tk else 0.0
     if live_price <= 0:
-        log.warning(f"webhook: could not determine price for {symbol}")
-        return _aiohttp_web.Response(status=422, text="price unknown")
+        # Fallback: use price_hint from TradingView if ticker failed
+        if price_hint and price_hint > 0:
+            live_price = price_hint
+            log.info(f"webhook: using TV price_hint={price_hint} for {symbol}")
+        else:
+            log.warning(f"webhook: could not determine price for {symbol}")
+            return _aiohttp_web.Response(status=422, text="price unknown")
 
     # Sanity check: refuse obviously fake prices (>5% off live market)
     if price_hint:
