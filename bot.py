@@ -333,9 +333,9 @@ def _load_market_bias():
 
 # Per-strategy risk profiles (% of price)
 PROFILES = {
-    "scalp":       {"tp": 0.6,  "sl": 0.4,  "trail": 0.25, "activate": 0.3,  "max_hold_min": 30},
-    "momentum":    {"tp": 3.0,  "sl": 1.2,  "trail": 1.0,  "activate": 0.8,  "max_hold_min": 360},
-    "swing":       {"tp": 4.5,  "sl": 2.0,  "trail": 2.0,  "activate": 1.5,  "max_hold_min": 1440},
+    "scalp":       {"tp": 0.6,  "sl": 0.4,  "trail": 2.0, "activate": 1.0,  "max_hold_min": 30},
+    "momentum":    {"tp": 3.0,  "sl": 1.2,  "trail": 3.0,  "activate": 1.5,  "max_hold_min": 360},
+    "swing":       {"tp": 4.5,  "sl": 2.0,  "trail": 4.0,  "activate": 2.0,  "max_hold_min": 1440},
     # WIDENED 2026-05-06 (forensics: trail killed winners @ 27-46% of TP).
     # WIDENED 2026-06-03: trail 1.5→2.5, activate 2.0→3.0 (used by funding_extremes)
     "meanrev":     {"tp": 4.0,  "sl": 3.0,  "trail": 2.5,  "activate": 3.0,  "max_hold_min": 480},
@@ -358,10 +358,10 @@ PROFILES = {
     # Daily range breakout: very wide stops, fee-immune, trailing only
     "daily_breakout": {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080},
     # WIDENED 2026-06-03: trail 1.2→2.0, activate 2.0→2.5
-    "daily_breakout_24h": {"tp": 99.0, "sl": 3.5, "trail": 2.0, "activate": 2.5, "max_hold_min": 1440},
+    "daily_breakout_24h": {"tp": 99.0, "sl": 3.5, "trail": 5.0, "activate": 2.0, "max_hold_min": 1440},
     # WIDENED 2026-06-03: trail 0.6→1.2, activate 1.5→2.0
-    "daily_breakout_4h":  {"tp": 99.0, "sl": 2.5, "trail": 1.2, "activate": 2.0, "max_hold_min": 360},
-    "daily_breakout_12h": {"tp": 99.0, "sl": 1.8, "trail": 0.9, "activate": 0.9, "max_hold_min": 720},
+    "daily_breakout_4h":  {"tp": 99.0, "sl": 2.5, "trail": 3.0, "activate": 1.5, "max_hold_min": 360},
+    "daily_breakout_12h": {"tp": 99.0, "sl": 1.8, "trail": 3.0, "activate": 1.5, "max_hold_min": 720},
     "daily_breakout_48h": {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 2880},
     "daily_breakout_7d":  {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080},
     # WIDENED 2026-06-03: trail 0.4→1.0, activate 0.4→1.0
@@ -369,7 +369,7 @@ PROFILES = {
     "daily_breakout_8h":  {"tp": 99.0, "sl": 1.5, "trail": 0.8, "activate": 0.8, "max_hold_min": 480},
     # New mechanisms (2026-05-01 build):
     "supertrend":         {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 4320},
-    "volume_capitulation": {"tp": 1.5, "sl": 1.5, "trail": 0.5, "activate": 0.5, "max_hold_min": 240},
+    "volume_capitulation": {"tp": 1.5, "sl": 1.5, "trail": 2.0, "activate": 1.0, "max_hold_min": 240},
     "asian_pump":         {"tp": 99.0, "sl": 2.5, "trail": 1.0, "activate": 1.0, "max_hold_min": 240},
     "pump_dump_reversal": {"tp": 99.0, "sl": 4.0, "trail": 1.0, "activate": 1.5, "max_hold_min": 720},
     # WIDENED 2026-06-03: trail 1.0→2.0, activate 2.0→3.0
