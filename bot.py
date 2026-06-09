@@ -2218,11 +2218,11 @@ class DailyBreakout24hAgent(Agent):
     notional_multiplier = 0.1
     name = "daily_breakout_24h"
     # 2026-06-03: SCALED — 1yr backtest: 3,841 trades, 79.7% WR, +0.493 ExpR
-    # 2026-06-05: KILLED — live learning 4t 25%w $-10.90, backtest didn't translate
-    enabled = False
+    # 2026-06-09: RE-ENABLED for ranging — +408R backtest, add RANGING
+    enabled = True
     paper_only = False
     profile = "daily_breakout_24h"
-    valid_regimes = ["TRENDING", "VOLATILE"]
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
 
     LOOKBACK_BARS = 24           # 1 day of 1H bars
     MIN_SL_PCT = 0.025
@@ -2349,13 +2349,13 @@ class DailyBreakout4hAgent(_DailyBreakoutBase):
     notional_multiplier = 0.02
     name = "daily_breakout_4h"
     profile = "daily_breakout_4h"
-    enabled = False  # 2026-06-08: CEO KILLED — redundant to 12h/48h
+    enabled = True  # 2026-06-09: RE-ENABLED for ranging — +678R backtest
     LOOKBACK_BARS = 4
     MIN_SL_PCT = 0.012
     MIN_VOLUME_RATIO = 1.3
     ATR_MULT = 1.0
-    # 2026-06-05: KILLED — live learning 3t 33%w $-0.80, backtest didn't translate
-    enabled = False
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]  # 2026-06-09: +RANGING, +678R backtest
+    # 2026-06-09: RE-ENABLED for ranging — +678R backtest
     paper_only = False
 
 
@@ -7986,7 +7986,6 @@ async def run(paper: bool = False, once: bool = False):
         # 2026-06-08: CEO RE-ENABLED winners. Keeping only proven losers.
         "asian_session", "atr_momentum",
         "candlestick",
-        "daily_breakout_2h", "daily_breakout_4h", "daily_breakout_24h",
         "daily_breakout_7d",
         "fib_786_oversold", "fib_hotzone", "fibonacci", "fib_confluence",
         "funding_fade_v2", "funding_extremes",
