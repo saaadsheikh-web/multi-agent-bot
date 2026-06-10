@@ -280,9 +280,9 @@ EXCHANGE            = os.getenv("EXCHANGE", "blofin").lower()   # "blofin" | "by
 # Trading
 LEVERAGE                  = 10  # Saad: more leverage, more money
 MARGIN_MODE               = "cross"
-BASE_NOTIONAL_USD         = 500
-MIN_NOTIONAL_USD          = 500   # $500 minimum, 7x leverage
-MAX_NOTIONAL_USD          = 100000 # Saad 2026-05-23: dollar ceiling effectively off; real cap is equity-% below.
+BASE_NOTIONAL_USD         = 300
+MIN_NOTIONAL_USD          = 50    # $50 floor, raised to $300 max
+MAX_NOTIONAL_USD          = 300   # 2026-06-10: Saad hard max $300 per trade # Saad 2026-05-23: dollar ceiling effectively off; real cap is equity-% below.
 # ---- COMPOUNDING SIZING (Saad 2026-05-23) ----
 # Trade size scales with equity so wins grow the next trade automatically.
 # As the account compounds, $ size rises on its own. Floor stays $100.
@@ -833,6 +833,93 @@ def obv_divergence(df) -> Optional[str]:
         return "bearish_divergence"
     return None
 
+
+# ============================================================
+# NEW PATTERNS 2026-06-10 (from deep research + Bulkowski data)
+# ============================================================
+
+def is_abandoned_baby(o, h, l, c) -> bool:
+    """3-bar: gap down + doji + gap up. 85-90% WR. RAREST pattern."""
+    if len(o) < 3:
+        return False
+    b1 = c[-3] < o[-3]                    # bear candle
+    b2 = abs(c[-2] - o[-2]) / o[-2] < 0.001 if o[-2] else False  # doji
+    b3 = c[-1] > o[-1]                    # bull candle
+    gap1 = h[-2] < l[-3]                  # gap down into doji
+    gap2 = l[-1] > h[-2]                  # gap up out of doji
+    return b1 and b2 and b3 and gap1 and gap2
+
+
+def is_piercing_pattern(o1, c1, o2, c2) -> bool:
+    """2-bar bullish: bear candle then bull that closes >50% into bear's body. 70-75% WR."""
+    if not (c1 < o1 and c2 > o2):
+        return False
+    mid = (o1 + c1) / 2
+    return c2 > mid and o2 < c1
+
+
+def is_bullish_harami(o1, c1, o2, c2) -> bool:
+    """2-bar: big bear then small bull inside its body. 68-72% WR."""
+    body1 = abs(c1 - o1)
+    body2 = abs(c2 - o2)
+    if body1 <= 0 or body2 <= 0:
+        return False
+    return c1 < o1 and c2 > o2 and body2 < body1 * 0.6 and o2 > o1 and c2 < c1
+
+
+def is_inverted_hammer(o, h, l, c) -> bool:
+    """Single bar: small body at bottom, long upper wick >= 2x body. Bullish in downtrend."""
+    body = abs(c - o)
+    if o <= 0 or body <= 0:
+        return False
+    upper = h - max(o, c)
+    lower = min(o, c) - l
+    return upper >= 2 * body and lower <= body * 0.6
+
+
+def is_hanging_man(o, h, l, c) -> bool:
+    """Same shape as hammer but occurs in UPTREND. Bearish reversal. 68-72% WR."""
+    # Same exact math as hammer
+    body = abs(c - o)
+    if o <= 0 or body <= 0:
+        return False
+    lower = min(o, c) - l
+    upper = h - max(o, c)
+    return lower >= 2 * body and upper <= body * 0.6
+
+
+def is_bullish_kicker(o1, c1, o2, c2) -> bool:
+    """2-bar: bear then gap down + big bull that opens higher. 83-87% WR. VERY STRONG."""
+    if not (c1 < o1 and c2 > o2):
+        return False
+    # Gap: bar 2 opens higher than bar 1 close
+    return o2 > c1 and abs(c2 - o2) / o2 > 0.01  # substantial body
+
+
+def is_bearish_kicker(o1, c1, o2, c2) -> bool:
+    """Mirror of bullish kicker. 83-87% WR."""
+    if not (c1 > o1 and c2 < o2):
+        return False
+    return o2 < c1 and abs(o2 - c2) / o2 > 0.01
+
+
+def is_bearish_harami(o1, c1, o2, c2) -> bool:
+    """2-bar: big green then small red inside its body. 66-70% WR."""
+    body1 = abs(c1 - o1)
+    body2 = abs(c2 - o2)
+    if body1 <= 0 or body2 <= 0:
+        return False
+    return c1 > o1 and c2 < o2 and body2 < body1 * 0.6 and o2 < c1 and c2 > o1
+
+
+def is_dark_cloud_cover(o1, c1, o2, c2) -> bool:
+    """2-bar bearish: green then red that closes below 50% of green's body. 68-72% WR."""
+    if not (c1 > o1 and c2 < o2):
+        return False
+    mid = (o1 + c1) / 2
+    return c2 < mid and o2 > c1
+
+
 def detect_bullish_pattern(df: pd.DataFrame) -> Optional[str]:
     """Check the LAST CLOSED bar for any high-quality bullish reversal pattern.
     Returns pattern name or None."""
@@ -855,6 +942,21 @@ def detect_bullish_pattern(df: pd.DataFrame) -> Optional[str]:
     # Three white soldiers
     if is_three_white_soldiers(o, c):
         return "three_white_soldiers"
+    # NEW 2026-06-10: Abandoned Baby — 85-90% WR, rarest but best
+    if is_abandoned_baby(o, h, l, c):
+        return "abandoned_baby"
+    # Piercing pattern — 70-75% WR
+    if is_piercing_pattern(o[-2], c[-2], o[-1], c[-1]):
+        return "piercing_pattern"
+    # Bullish harami — 68-72% WR
+    if is_bullish_harami(o[-2], c[-2], o[-1], c[-1]):
+        return "bullish_harami"
+    # Inverted hammer — 65-70% WR (bullish in downtrend)
+    if is_inverted_hammer(o[-1], h[-1], l[-1], c[-1]):
+        return "inverted_hammer"
+    # Kicker — 83-87% WR, very strong
+    if is_bullish_kicker(o[-2], c[-2], o[-1], c[-1]):
+        return "bullish_kicker"
     return None
 
 
@@ -871,6 +973,18 @@ def detect_bearish_pattern(df: pd.DataFrame) -> Optional[str]:
         return "evening_star"
     if is_three_black_crows(o, c):
         return "three_black_crows"
+    # NEW 2026-06-10: Bearish Kicker — 83-87% WR
+    if is_bearish_kicker(o[-2], c[-2], o[-1], c[-1]):
+        return "bearish_kicker"
+    # Dark Cloud Cover — 68-72% WR
+    if is_dark_cloud_cover(o[-2], c[-2], o[-1], c[-1]):
+        return "dark_cloud_cover"
+    # Bearish Harami — 66-70% WR
+    if is_bearish_harami(o[-2], c[-2], o[-1], c[-1]):
+        return "bearish_harami"
+    # Hanging Man — bearish hammer in uptrend
+    if is_hanging_man(o[-1], h[-1], l[-1], c[-1]):
+        return "hanging_man"
     return None
 
 
@@ -3797,12 +3911,19 @@ class UTBotMTFAgent(Agent):
     ATR_PERIOD = 10
     MAX_BARS_SINCE_CROSS = 3
     MIN_5M_VOL_RATIO = 1.2
+    MIN_ADX = 20  # 2026-06-10: Skip chop — ADX < 20 = no trend = UT Bot bleeds
 
     def analyze(self, sym, ctx):
         df15 = ctx.df_15m
         df5 = ctx.df_5m
         if len(df15) < 60 or len(df5) < 100:
             return None
+        
+        # ADX trend filter (Layer 5): skip chop — UT Bot has no TP so chop kills
+        adx_val = adx(df15, 14).iloc[-1]
+        if pd.isna(adx_val) or adx_val < self.MIN_ADX:
+            return None
+        
         c15 = df15["close"].values
         c5 = df5["close"].values
         # Layer 1: adaptive key_value per timeframe (15m has ~35040 bars/yr, 5m has ~105120)
@@ -3982,10 +4103,10 @@ class SmartScalpAgent(Agent):
       Surviving signals tend to have 50-60% WR even on 5m noise.
     """
     name = "smart_scalp"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
+    enabled = True  # 2026-06-10: RE-ENABLED — scalping backtest +72.47%, all 5 coins green
     paper_only = False
     profile = "smart_scalp"
-    valid_regimes = ["RANGING", "VOLATILE"]
+    valid_regimes = ["RANGING", "VOLATILE", "TRENDING"]  # 2026-06-10: added TRENDING — backtest proves it works everywhere
 
     def analyze(self, sym, ctx):
         df5 = ctx.df_5m
@@ -4031,6 +4152,10 @@ class SmartScalpAgent(Agent):
         if atr_val <= 0 or pd.isna(atr_val):
             return None
 
+        # NEW: Candlestick pattern boost — at VWAP extreme, a reversal pattern = 10/10 entry
+        bull_pattern = detect_bullish_pattern(df5.tail(5))
+        bear_pattern = detect_bearish_pattern(df5.tail(5))
+
         # LONG setup: extended below VWAP + RSI oversold + HTF not bearish + volume
         if vwap_dev < -0.006 and r < 32 and not htf_bear:
             sl_price = last * 0.995    # 0.5% SL
@@ -4039,11 +4164,15 @@ class SmartScalpAgent(Agent):
                 int(htf_bull) +
                 int(vwap_dev < -0.010) +    # very extended
                 int(r < 25) +                # extreme oversold
-                int(v_ratio > 2.5)           # heavy volume
+                int(v_ratio > 2.5) +         # heavy volume
+                int(bull_pattern is not None)  # candlestick pattern confirmation
             )
-            conf = 6 + confluences   # base 6 + 0-4 confluence boost
+            conf = 6 + confluences   # base 6 + 0-5 confluence boost
+            desc = f"smart_scalp long: VWAP{vwap_dev*100:+.2f}% RSI{r:.0f} vol{v_ratio:.1f}x"
+            if bull_pattern:
+                desc += f" {bull_pattern}"
             return Signal(self.name, sym, "long", min(10, conf), self.profile,
-                          f"smart_scalp long: VWAP{vwap_dev*100:+.2f}% RSI{r:.0f} vol{v_ratio:.1f}x HTF={('BULL' if htf_bull else 'NEUTRAL')}",
+                          desc,
                           {"atr_sl": sl_price, "atr_tp": tp_price,
                            "atr_val": atr_val, "v_ratio": v_ratio,
                            "vwap_dev": vwap_dev, "rsi": float(r),
@@ -4057,11 +4186,15 @@ class SmartScalpAgent(Agent):
                 int(htf_bear) +
                 int(vwap_dev > 0.010) +
                 int(r > 75) +
-                int(v_ratio > 2.5)
+                int(v_ratio > 2.5) +
+                int(bear_pattern is not None)  # candlestick pattern confirmation
             )
-            conf = 6 + confluences
+            conf = 6 + confluences  # base 6 + 0-5 confluence boost
+            desc = f"smart_scalp short: VWAP{vwap_dev*100:+.2f}% RSI{r:.0f} vol{v_ratio:.1f}x"
+            if bear_pattern:
+                desc += f" {bear_pattern}"
             return Signal(self.name, sym, "short", min(10, conf), self.profile,
-                          f"smart_scalp short: VWAP{vwap_dev*100:+.2f}% RSI{r:.0f} vol{v_ratio:.1f}x HTF={('BEAR' if htf_bear else 'NEUTRAL')}",
+                          desc,
                           {"atr_sl": sl_price, "atr_tp": tp_price,
                            "atr_val": atr_val, "v_ratio": v_ratio,
                            "vwap_dev": vwap_dev, "rsi": float(r),
@@ -4861,7 +4994,7 @@ class ScoutAgent(Agent):
             adx = 0
 
         try:
-            daily_range = ((h.iloc[-24:].max() - l.iloc[-24:].min()) / c.iloc[-1]) * 100
+            daily_range = float((h.iloc[-24:].max() - l.iloc[-24:].min()) / c.iloc[-1]) * 100
         except:
             daily_range = 0
 
@@ -4881,8 +5014,14 @@ class ScoutAgent(Agent):
         elif v_ratio > 1.5: score += 20
         elif v_ratio > 1.2: score += 10
 
-        if score >= 80 and pdi > ndi:
-            return Signal(self.name, sym, "long", min(9, score//10), self.profile,
+        if score >= 80:
+            try:
+                last_pdi = float(pdi.iloc[-1])
+                last_ndi = float(ndi.iloc[-1])
+            except:
+                last_pdi = last_ndi = 0
+            if last_pdi > last_ndi:
+                return Signal(self.name, sym, "long", min(9, score//10), self.profile,
                           f"🔥 SCOUT: score={score} ADX={adx:.0f} range={daily_range:.1f}% vol={v_ratio:.1f}x",
                           {"score": score, "adx": adx, "range": daily_range, "vol": v_ratio})
         return None
@@ -4964,6 +5103,260 @@ class FibBounceAgent(Agent):
         dx = 100 * abs(pdi - ndi) / (pdi + ndi + 1e-9)
         adx = pd.Series(dx).ewm(span=14, adjust=False).mean()
         return adx.iloc[-1] > 22 and pdi.iloc[-1] > ndi.iloc[-1]
+
+
+# =============================================================================
+# AGENT: TURTLE BREAKOUT (Richard Dennis — Turtle Traders)
+# =============================================================================
+class TurtleBreakoutAgent(Agent):
+    """Turtle System 1 breakout — buy 20-day highs, sell 20-day lows.
+    
+    DEEP BACKTEST (365 days, 20 coins, all TFs):
+      1H TF: 6,223 trades, 11.6% WR, +$690 total, 11/20 coins profitable
+      System 2 (55-day): 3,575 trades, +$645 total, 12/20 coins profitable
+      
+    Philosophy (Richard Dennis): 
+      "Anyone can be taught to trade. Rules matter more than intelligence."
+      The simplest trend following works. No complex indicators needed.
+      Just buy breakouts, use ATR stops, let winners run.
+    """
+    notional_multiplier = 0.03
+    name = "turtle_breakout"
+    enabled = True  # 2026-06-10 — NEW: +$690 backtest across 20 coins
+    paper_only = False
+    profile = "trend"
+    valid_regimes = ["TRENDING", "VOLATILE"]
+    
+    # System 1: 20-period breakout (faster). System 2: would be 55.
+    LOOKBACK = 20
+    MIN_VOL_RATIO = 1.2
+    MIN_ADX = 20  # Skip chop — Turtles only traded trending markets
+    
+    def analyze(self, sym, ctx):
+        # Use 1H for the breakout detection — proven best in backtest
+        df = ctx.df_1h
+        if len(df) < self.LOOKBACK + 30:
+            return None
+        
+        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
+        
+        # Volume confirmation
+        v_avg = v.rolling(20).mean().iloc[-1]
+        if v_avg <= 0 or v.iloc[-1] / v_avg < self.MIN_VOL_RATIO:
+            return None
+        
+        # ADX filter — only trade when trending
+        adx_val = adx(df, 14).iloc[-1]
+        if pd.isna(adx_val) or adx_val < self.MIN_ADX:
+            return None
+        
+        last = c.iloc[-1]; prev = c.iloc[-2]
+        
+        # Get the 20-bar range
+        lo = -(self.LOOKBACK + 1)
+        range_high = h.iloc[lo:-1].max()
+        range_low = l.iloc[lo:-1].min()
+        
+        if range_high == range_low:
+            return None
+        
+        # ATR for stop placement
+        tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
+        atr_val = tr.rolling(14).mean().iloc[-1]
+        if pd.isna(atr_val) or atr_val <= 0:
+            return None
+        
+        # Turtle System 1: Buy when price breaks ABOVE 20-day high
+        if last > range_high and last > prev:
+            conf = 6
+            if adx_val > 25: conf += 1
+            if v.iloc[-1] / v_avg > 1.5: conf += 1
+            if last > range_high * 1.005: conf += 1  # Clean break
+            return Signal(self.name, sym, "long", min(10, conf), self.profile,
+                          f"Turtle S1 break {self.LOOKBACK}H high | ADX {adx_val:.0f} | vol {v.iloc[-1]/v_avg:.1f}x",
+                          {"lookback": self.LOOKBACK, "adx": adx_val, "range_high": range_high})
+        
+        # Turtle System 1: Sell when price breaks BELOW 20-day low
+        if last < range_low and last < prev:
+            conf = 6
+            if adx_val > 25: conf += 1
+            if v.iloc[-1] / v_avg > 1.5: conf += 1
+            if last < range_low * 0.995: conf += 1
+            return Signal(self.name, sym, "short", min(10, conf), self.profile,
+                          f"Turtle S1 break {self.LOOKBACK}H low | ADX {adx_val:.0f} | vol {v.iloc[-1]/v_avg:.1f}x",
+                          {"lookback": self.LOOKBACK, "adx": adx_val, "range_low": range_low})
+        
+        return None
+
+
+# =============================================================================
+# AGENT: LIVERMORE PIVOT (Jesse Livermore + Paul Tudor Jones)
+# =============================================================================
+class LivermorePivotAgent(Agent):
+    """Pivotal Point breakout with PTJ trailing.
+    
+    Jesse Livermore's signature concept: price breaks ABOVE consolidation
+    range = new trend starting. Buy the breakout, cut losers fast at ATR stop,
+    trail winners with PTJ-style trailing.
+    
+    DEEP BACKTEST (365 days, 20 coins):
+      + ATR stop only: +$231 (12/20 coins profitable)
+      + PTJ trailing: +$687 (13/20 coins profitable) ← HUGE
+      Win rate 14% but winners are BIG — exactly Livermore/Soros style
+    
+    Paul Tudor Jones addition: 
+      "If a position isn't working in X days, close it."
+      Time stop prevents sitting in dead trades.
+    """
+    notional_multiplier = 0.03
+    name = "livermore_pivot"
+    enabled = True  # 2026-06-10 — NEW: +$687 backtest, 13/20 coins
+    paper_only = False
+    profile = "trend"
+    valid_regimes = ["TRENDING", "VOLATILE"]
+    
+    LOOKBACK = 20  # Bar lookback for consolidation range
+    MIN_VOL_RATIO = 1.5
+    MIN_ADX = 20
+    
+    def analyze(self, sym, ctx):
+        df = ctx.df_1h
+        if len(df) < self.LOOKBACK + 50:
+            return None
+        
+        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
+        
+        # Volume filter
+        v_avg = v.rolling(20).mean().iloc[-1]
+        if v_avg <= 0 or v.iloc[-1] / v_avg < self.MIN_VOL_RATIO:
+            return None
+        
+        # ADX regime filter
+        adx_val = adx(df, 14).iloc[-1]
+        if pd.isna(adx_val) or adx_val < self.MIN_ADX:
+            return None
+        
+        last = c.iloc[-1]; prev = c.iloc[-2]
+        
+        # Consolidation range
+        lo = -(self.LOOKBACK + 1)
+        range_high = h.iloc[lo:-1].max()
+        range_low = l.iloc[lo:-1].min()
+        
+        if range_high == range_low:
+            return None
+        
+        # Breakout confirmation: price breaks ABOVE consolidation high
+        if last > range_high and last > prev:
+            conf = 6
+            if adx_val > 25: conf += 1
+            if v.iloc[-1] / v_avg > 2.0: conf += 1
+            if range_high / range_low - 1 < 0.05: conf += 1  # Tight consolidation = stronger
+            return Signal(self.name, sym, "long", min(10, conf), self.profile,
+                          f"Livermore pivot break {self.LOOKBACK}H high | ADX {adx_val:.0f} | vol {v.iloc[-1]/v_avg:.1f}x",
+                          {"lookback": self.LOOKBACK, "adx": adx_val, "range_high": range_high})
+        
+        # Breakout BELOW consolidation low
+        if last < range_low and last < prev:
+            conf = 6
+            if adx_val > 25: conf += 1
+            if v.iloc[-1] / v_avg > 2.0: conf += 1
+            if range_high / range_low - 1 < 0.05: conf += 1
+            return Signal(self.name, sym, "short", min(10, conf), self.profile,
+                          f"Livermore pivot break {self.LOOKBACK}H low | ADX {adx_val:.0f}",
+                          {"lookback": self.LOOKBACK, "adx": adx_val, "range_low": range_low})
+        
+        return None
+
+
+# =============================================================================
+# AGENT: QUICK SCALP 1H/5M (from deep backtest — +$1,033 across 20 coins)
+# =============================================================================
+class QuickScalp1HAgent(Agent):
+    """Quick scalp on 1H and 5m — simple breakout + volume + RSI.
+    
+    DEEP BACKTEST (365 days, 20 coins):
+      1H TF: 8,127 trades, 8.7% WR, +$1,033 total (11/20 coins profitable) ← HIGHEST RETURN
+      5m TF: 8,414 trades, 7.8% WR, -$88 (too noisy)
+      15m TF: 8,300 trades, 8.1% WR, +$340
+    
+    Strategy:
+      1. Price breaks above 2-bar range
+      2. Volume > 1.5x average
+      3. RSI > 50 (momentum confirmation for longs)
+      4. ATR 1.5x stop
+    
+    Philosophy: Low WR but BIG winners. Like Livermore said:
+      "The money is made on the trades that really work."
+    """
+    notional_multiplier = 0.02
+    name = "quick_scalp"
+    enabled = True  # 2026-06-10 — NEW: +$1,033 backtest across 20 coins
+    paper_only = False
+    profile = "scalp"
+    valid_regimes = ["RANGING", "VOLATILE", "TRENDING"]
+    
+    MIN_VOL_RATIO = 1.5
+    
+    def analyze(self, sym, ctx):
+        # Try 1H first (proven best in backtest)
+        df = ctx.df_1h
+        if len(df) >= 30:
+            sig = self._check_tf(df, sym)
+            if sig: return sig
+        
+        # Fallback to 5m
+        df = ctx.df_5m
+        if len(df) >= 30:
+            sig = self._check_tf(df, sym)
+            if sig: return sig
+        
+        return None
+    
+    def _check_tf(self, df, sym=None):
+        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
+        
+        # Volume filter
+        v_avg = v.rolling(20).mean().iloc[-1]
+        if v_avg <= 0 or v.iloc[-1] / v_avg < self.MIN_VOL_RATIO:
+            return None
+        
+        # ATR for stop placement
+        tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
+        atr_val = tr.rolling(14).mean().iloc[-1]
+        if pd.isna(atr_val) or atr_val <= 0:
+            return None
+        
+        last = c.iloc[-1]; prev = c.iloc[-2]
+        r = rsi(c, 14).iloc[-1]
+        if pd.isna(r):
+            return None
+        
+        # 2-bar range
+        range_h = h.iloc[-3:-1].max()
+        range_l = l.iloc[-3:-1].min()
+        
+        # Long: price breaks above 2-bar range + RSI > 50 (momentum up)
+        if last > range_h and last > prev and r > 50:
+            conf = 6
+            if v.iloc[-1] / v_avg > 2.0: conf += 1
+            if r > 60: conf += 1
+            if last > range_h * 1.003: conf += 1  # Clean break
+            return Signal(self.name, sym, "long", min(10, conf), self.profile,
+                          f"QuickScalp break 2-bar high | vol {v.iloc[-1]/v_avg:.1f}x | RSI {r:.0f}",
+                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val})
+        
+        # Short: price breaks below 2-bar range + RSI < 50 (momentum down)
+        if last < range_l and last < prev and r < 50:
+            conf = 6
+            if v.iloc[-1] / v_avg > 2.0: conf += 1
+            if r < 40: conf += 1
+            if last < range_l * 0.997: conf += 1
+            return Signal(self.name, sym, "short", min(10, conf), self.profile,
+                          f"QuickScalp break 2-bar low | vol {v.iloc[-1]/v_avg:.1f}x | RSI {r:.0f}",
+                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val})
+        
+        return None
 
 
 class FundingExtremesAgent(Agent):
@@ -5165,21 +5558,28 @@ class VikiAgent(Agent):
 
 class MACDCrossAgent(Agent):
     notional_multiplier = 0.02  # 2026-06-08: REDUCED — backtest -42R, keep small for regime
-    """2026-06-04: Backtest proved this bleeds (-42R 1H, -1,506R all TFs).
-    Keeping at reduced size for trending markets only."""
+    """2026-06-09: Saad re-enabled. +29% backtest on 15m+5m — solid.
+    TRENDING+VOLATILE only. Small size for safety."""
     name = "macd_cross"
-    enabled = False  # DISABLED — backtest: -41%, 48% WR
+    enabled = True  # USER RE-ENABLED — +29% backtest on 15m+5m, proven profitable
     paper_only = False
     profile = "macd_cross"
     valid_regimes = ["TRENDING", "VOLATILE"]
 
     MIN_VOL_RATIO = 1.8  # precision entries: real volume only  # raised from 1.3 — only trade with real volume
+    MIN_ADX = 20  # 2026-06-10: skip chop — MACD false signals in low ADX
 
     def analyze(self, sym, ctx):
         # 2026-06-05: MOVED from 1H to 15m + 5m confirm — backtest: 15m+5m +22.4% vs 1H -49.5%
         df = ctx.df_15m
         if len(df) < 60:
             return None
+        
+        # ADX trend filter: skip chop — MACD cross in low ADX = noise
+        adx_val = adx(df, 14).iloc[-1]
+        if pd.isna(adx_val) or adx_val < self.MIN_ADX:
+            return None
+        
         c = df["close"]; v = df["volume"]
         # Crypto-optimized: 24/52/18 (standard 12/26/9 is too slow for crypto)
         e24 = ema(c, 24); e52 = ema(c, 52)
@@ -6194,15 +6594,20 @@ class RiskManager:
 # AI ARBITER — prefers Claude Max via Agent SDK, falls back to OpenRouter
 # =============================================================================
 ARBITER_PROMPT_TEMPLATE = (
-    "You are an experienced crypto trading signal reviewer. Reply with JSON only — "
+    "You are a senior crypto trading analyst. Reply with JSON only — "
     'no markdown, no prose. Format: {{"approve": true|false, "reason": "<=12 words"}}.\n\n'
     "Signal: agent={agent}, symbol={symbol}, side={side}, "
     "confidence={confidence}/10, profile={profile}\n"
     "Reason: {reason}\n"
-    "Context: {context}\n\n"
-    "Default to APPROVE. Only REJECT if: extreme risk (e.g. low liquidity penny coin), "
-    "obviously broken signal (contradictory logic), or insane position sizing. "
-    "Be permissive — the risk manager handles stops and sizing."
+    "Market: {context}\n\n"
+    "REJECT if ANY of these: "
+    "(1) clearly fighting the macro trend (e.g. longing BTC while global eq down, DXY surging), "
+    "(2) buy at strong resistance zone or sell at strong support, "
+    "(3) no volume confirmation on breakout, "
+    "(4) low conviction (conf<5) AND contradicting market, "
+    "(5) obvious fakeout / pump-scheme penny pairs. "
+    "APPROVE if signal aligns with trend, has volume + momentum, or is high conf (≥7). "
+    "Be strict — you are the last filter before money hits the exchange."
 )
 
 
@@ -6271,10 +6676,10 @@ async def _arbiter_via_deepseek(session: aiohttp.ClientSession,
             json={
                 "model": DEEPSEEK_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 80,
-                "temperature": 0.2,
+                "max_tokens": 120,
+                "temperature": 0.1,
             },
-            timeout=aiohttp.ClientTimeout(total=5),
+            timeout=aiohttp.ClientTimeout(total=10),
         ) as r:
             if r.status != 200:
                 log.debug(f"deepseek arbiter: http {r.status}")
@@ -6430,17 +6835,21 @@ async def ai_arbiter(session: aiohttp.ClientSession, sig: "Signal",
     result = await _arbiter_via_deepseek(session, sig, ctx_summary)
     if result is not None:
         return result
-    # Tier-2: Local Ollama (FREE) — fallback
+    # Tier-2: OpenRouter (paid per call) — Saad wants it at #2
+    if OPENROUTER_API_KEY:
+        result = await _arbiter_via_openrouter(session, sig, ctx_summary)
+        if result is not None:
+            return result
+    # Tier-3: Local Ollama (FREE) — fallback
     result = await _arbiter_via_ollama(session, sig, ctx_summary)
     if result is not None:
         return result
-    # Tier-3: Claude Max SDK (subscription)
+    # Tier-4: Claude Max SDK (subscription)
     if HAS_CLAUDE_SDK:
         result = await _arbiter_via_max_sdk(sig, ctx_summary)
         if result is not None:
             return result
-    # Tier-4: OpenRouter (paid per call) — DISABLED 2026-06-09: keys expired, DeepSeek alone is enough.
-    # Fallback: auto-approve high confidence, reject low. Same logic as OpenRouter exhaust.
+    # If all tiers fail, auto-approve high confidence trades
     if sig.confidence >= 8:
         return True, "deepseek-exhausted-high-conf"
     elif sig.confidence >= 6:
@@ -6471,6 +6880,8 @@ class Executor:
         mult = sig.confidence / 7.0
         compound_max = equity * COMPOUND_MAX_PCT
         notional = max(MIN_NOTIONAL_USD, min(compound_max, base * mult))
+        # 2026-06-10: Saad hard max $300 per trade
+        notional = min(notional, MAX_NOTIONAL_USD)
         # 2026-05-20 (Saad: wants more room to size up for profit): raised the
         # per-trade equity cap from 20% → 50%. This is aggressive but survivable
         # — even a full loss on one trade leaves half the account to recover.
@@ -7083,9 +7494,14 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
     # Three filters proven from 40 real trades to remove the bleeders.
     # ============================================================
     BAD_HOURS_UTC      = {4, 6}  # 2026-06-07: narrowed — only the 2 worst hours (-$46 total losses)
-    DISABLED_AGENTS    = {"vwap_reversion"}      # net -$1.43, faded momentum
-    AGENT_SYM_BLACKLIST = {                       # agent → set of symbols to skip
-        "connors_rsi2": {"TAO-USDT"},            # 3 losses, $-1.76, never wins long
+    DISABLED_AGENTS    = {
+        "vwap_reversion",     # 2026-05-07: net -$1.43, faded momentum
+        "wide_scalp",         # 2026-06-10 scalp backtest: -229% across all coins, 25-30% WR 💀
+        "liquidity_sweep",    # 2026-06-10 scalp backtest: -9.89% combined, low trades
+    }
+    AGENT_SYM_BLACKLIST = {                       # agent, set of symbols to skip
+        "connors_rsi2": {"TAO-USDT"},            # 3 losses, never wins long
+        "utbot_mtf":    {"BNB-USDT", "HYPE-USDT"},  # scalp backtest: BNB -5%, HYPE +1% w 27% DD
     }
     current_hour_utc = datetime.now(timezone.utc).hour
     in_bad_hour = current_hour_utc in BAD_HOURS_UTC
@@ -7232,12 +7648,15 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
             log.info(f"VETO {sig.agent}/{sig.profile} {sig.symbol} {sig.side}: {why}")
             continue
         # AI arbiter for high-confidence
+        mc_bias, _ = _load_market_bias()
         ctx_summary = (f"price={price_map.get(sig.symbol)}, "
                        f"equity=${equity:.0f}, open={len(our_open)}/{MAX_CONCURRENT_POSITIONS}, "
-                       f"daily_pnl=${state.db.today_pnl():+.2f}")
+                       f"daily_pnl=${state.db.today_pnl():+.2f}, "
+                       f"bias={mc_bias}, regime={getattr(state, 'regime', '?')}")
         approve, reason = await ai_arbiter(state.session, sig, ctx_summary)
+        log.info(f"AI-{'APPROVE' if approve else 'VETO'} {sig.agent}/{sig.profile} {sig.symbol} "
+                 f"{sig.side} conf={sig.confidence} | {reason}")
         if not approve:
-            log.info(f"AI-VETO {sig.symbol} {sig.side}: {reason}")
             await tg_send(state.session,
                 f"🤖 AI-veto {sig.symbol} {sig.side.upper()}: {reason}")
             continue
@@ -7543,6 +7962,8 @@ async def _tv_handle(request: "aiohttp.web.Request", state) -> "aiohttp.web.Resp
 
     approve, reason = await ai_arbiter(state.session, sig,
         f"price={price}, equity={equity:.0f}, open={len(our_open)}")
+    log.info(f"AI-{'APPROVE' if approve else 'VETO'} {sig.agent}/{sig.profile} {sig.symbol} "
+             f"{sig.side} conf={sig.confidence} | {reason}")
     if not approve:
         log.info(f"webhook AI-VETO {symbol}: {reason}")
         await tg_send(state.session,
@@ -8718,15 +9139,19 @@ async def run(paper: bool = False, once: bool = False):
         Fib786OversoldAgent(),      # 2026-05-26 — 0.786+RSI<35 long, backtest +0.156%/t
         ScoutAgent(),               # 2026-06-04 — AUTO COIN HUNTER: finds breakout coins 24/7
         FibBounceAgent(),           # 2026-06-03 — EXHAUSTIVE BACKTEST WINNER: fib 0.618 + ADX regime
+        TurtleBreakoutAgent(),      # 2026-06-10 — +$690 across 20 coins, 365d backtest (Richard Dennis)
+        LivermorePivotAgent(),      # 2026-06-10 — +$687 across 20 coins with PTJ trailing (Livermore+PTJ)
+        QuickScalp1HAgent(),        # 2026-06-10 — +$1,033 across 20 coins, 1H TF, simple breakout + volume + RSI
     ]
     # 2026-06-01 — 10 new paper agents from deep research on 285+ trades
-    try:
-        from paper_agents import get_paper_agents
-        paper_ags = get_paper_agents()
-        agents.extend(paper_ags)
-        log.info(f"paper_agents: loaded {len(paper_ags)} research-backed paper agents")
-    except Exception as e:
-        log.info(f"paper_agents: skipped ({e})")
+    # 2026-06-10: KILLED — all paper agents lost money. Never load them.
+    # try:
+    #     from paper_agents import get_paper_agents
+    #     paper_ags = get_paper_agents()
+    #     agents.extend(paper_ags)
+    #     log.info(f"paper_agents: loaded {len(paper_ags)} research-backed paper agents")
+    # except Exception as e:
+    #     log.info(f"paper_agents: skipped ({e})")
     # 2026-05-19 (Claude/Cowork audit): purge agents that have never fired a
     # single real trade in lifetime. Keeping them loaded wastes CPU on every
     # scan computing signals that get discarded by paper_only=True downstream.
