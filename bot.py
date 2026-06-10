@@ -2975,23 +2975,31 @@ class LiquiditySweepScalpAgent(Agent):
             wick_depth = (recent_low - last_l) / recent_low
             if wick_depth < 0.0015:   # need real wick, not noise
                 return None
-            sl_price = last_l * 0.998   # just below wick
-            tp_price = last_c * 1.012
+            # BETTER ENTRY: place limit AT the swept liquidity level (recent low).
+            # After sweep, price reclaims. Limit AT the swept low catches the
+            # reversal if it retests. Much better R:R than chasing the close.
+            entry_zone = float(recent_low)  # entry AT the swept low
+            sl_price = entry_zone * 0.998   # just below wick
+            tp_price = entry_zone * 1.012
             conf = 7 + int(v_ratio > 2.5) + int(wick_depth > 0.004)
             return Signal(self.name, sym, "long", min(10, conf), self.profile,
                           f"liquidity sweep long, wick {wick_depth*100:.2f}%, vol {v_ratio:.1f}x",
-                          {"atr_sl": sl_price, "atr_tp": tp_price, "v_ratio": v_ratio})
+                          {"atr_sl": sl_price, "atr_tp": tp_price, "v_ratio": v_ratio,
+                           "entry_zone": entry_zone})
         # SHORT: wicked above recent high, closed back below it
         if last_h > recent_high and last_c < recent_high and last_c < last_o:
             wick_depth = (last_h - recent_high) / recent_high
             if wick_depth < 0.0015:
                 return None
-            sl_price = last_h * 1.002
-            tp_price = last_c * 0.988
+            # BETTER ENTRY: place limit AT the swept liquidity level (recent high).
+            entry_zone = float(recent_high)  # entry AT the swept high
+            sl_price = entry_zone * 1.002
+            tp_price = entry_zone * 0.988
             conf = 7 + int(v_ratio > 2.5) + int(wick_depth > 0.004)
             return Signal(self.name, sym, "short", min(10, conf), self.profile,
                           f"liquidity sweep short, wick {wick_depth*100:.2f}%, vol {v_ratio:.1f}x",
-                          {"atr_sl": sl_price, "atr_tp": tp_price, "v_ratio": v_ratio})
+                          {"atr_sl": sl_price, "atr_tp": tp_price, "v_ratio": v_ratio,
+                           "entry_zone": entry_zone})
         return None
 
 
@@ -3138,7 +3146,7 @@ class WideScalpAgent(Agent):
         df = ctx.df_1h
         if len(df) < 50:
             return None
-        c = df["close"]
+        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
         last = c.iloc[-1]
         atr_val = atr(df).iloc[-1]
         if atr_val <= 0 or pd.isna(atr_val):
@@ -3148,19 +3156,30 @@ class WideScalpAgent(Agent):
         if atr_pct > 0.015:
             return None
         r = rsi(c).iloc[-1]
+        # VWAP for entry zone (mean-reversion target)
+        tp = (h + l + c) / 3
+        vwap = (tp * v).rolling(50).sum() / v.rolling(50).sum()
+        vwap_now = float(vwap.iloc[-1]) if not pd.isna(vwap.iloc[-1]) else None
         # LONG: oversold in low-vol chop
         if r < 30:
-            sl_price = last * 0.994   # 0.6%
-            tp_price = last * 1.012   # 1.2%
+            # BETTER ENTRY: use VWAP as entry zone for mean-reversion
+            entry_zone = vwap_now if vwap_now and vwap_now < last else None
+            base_price = entry_zone or last
+            sl_price = base_price * 0.994   # 0.6%
+            tp_price = base_price * 1.012   # 1.2%
             return Signal(self.name, sym, "long", 7 + int(r < 25), self.profile,
                           f"WideScalp long RSI={r:.0f} ATR%={atr_pct*100:.2f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price})
+                          {"atr_sl": sl_price, "atr_tp": tp_price,
+                           "entry_zone": entry_zone} if entry_zone else {"atr_sl": sl_price, "atr_tp": tp_price})
         if r > 70:
-            sl_price = last * 1.006
-            tp_price = last * 0.988
+            entry_zone = vwap_now if vwap_now and vwap_now > last else None
+            base_price = entry_zone or last
+            sl_price = base_price * 1.006
+            tp_price = base_price * 0.988
             return Signal(self.name, sym, "short", 7 + int(r > 75), self.profile,
                           f"WideScalp short RSI={r:.0f} ATR%={atr_pct*100:.2f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price})
+                          {"atr_sl": sl_price, "atr_tp": tp_price,
+                           "entry_zone": entry_zone} if entry_zone else {"atr_sl": sl_price, "atr_tp": tp_price})
         return None
 
 
@@ -4158,8 +4177,12 @@ class SmartScalpAgent(Agent):
 
         # LONG setup: extended below VWAP + RSI oversold + HTF not bearish + volume
         if vwap_dev < -0.006 and r < 32 and not htf_bear:
-            sl_price = last * 0.995    # 0.5% SL
-            tp_price = last * 1.008    # 0.8% TP
+            # BETTER ENTRY: place limit AT VWAP (mean-reversion target zone)
+            # Price is extended below VWAP — we want to catch it as it reverts BACK to VWAP
+            # The VWAP is a magnetic level. Placing limit AT vwap means we catch the bounce.
+            entry_zone = float(vwap_now)  # entry limit AT VWAP for mean-reversion
+            sl_price = entry_zone * 0.995    # 0.5% SL from VWAP entry
+            tp_price = entry_zone * 1.008    # 0.8% TP from VWAP entry
             confluences = (
                 int(htf_bull) +
                 int(vwap_dev < -0.010) +    # very extended
@@ -4176,12 +4199,16 @@ class SmartScalpAgent(Agent):
                           {"atr_sl": sl_price, "atr_tp": tp_price,
                            "atr_val": atr_val, "v_ratio": v_ratio,
                            "vwap_dev": vwap_dev, "rsi": float(r),
+                           "entry_zone": entry_zone,
                            "confluences": confluences})
 
         # SHORT setup: extended above VWAP + RSI overbought + HTF not bullish
         if vwap_dev > 0.006 and r > 68 and not htf_bull:
-            sl_price = last * 1.005
-            tp_price = last * 0.992
+            # BETTER ENTRY: place limit AT VWAP (mean-reversion target zone)
+            # Price is extended above VWAP — we want to catch it as it reverts BACK to VWAP
+            entry_zone = float(vwap_now)  # entry limit AT VWAP for mean-reversion
+            sl_price = entry_zone * 1.005    # 0.5% SL from VWAP entry
+            tp_price = entry_zone * 0.992    # 0.8% TP from VWAP entry
             confluences = (
                 int(htf_bear) +
                 int(vwap_dev > 0.010) +
@@ -4198,6 +4225,7 @@ class SmartScalpAgent(Agent):
                           {"atr_sl": sl_price, "atr_tp": tp_price,
                            "atr_val": atr_val, "v_ratio": v_ratio,
                            "vwap_dev": vwap_dev, "rsi": float(r),
+                           "entry_zone": entry_zone,
                            "confluences": confluences})
         return None
 
@@ -5342,19 +5370,27 @@ class QuickScalp1HAgent(Agent):
             if v.iloc[-1] / v_avg > 2.0: conf += 1
             if r > 60: conf += 1
             if last > range_h * 1.003: conf += 1  # Clean break
+            # BETTER ENTRY: place limit AT the range high (breakout level).
+            # After price breaks out, it often pulls back to retest the breakout level
+            # before continuing. Limit AT range_high catches the retest at a better price.
+            entry_zone = float(range_h)  # retest the breakout level
             return Signal(self.name, sym, "long", min(10, conf), self.profile,
                           f"QuickScalp break 2-bar high | vol {v.iloc[-1]/v_avg:.1f}x | RSI {r:.0f}",
-                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val})
-        
+                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val,
+                           "entry_zone": entry_zone})
+
         # Short: price breaks below 2-bar range + RSI < 50 (momentum down)
         if last < range_l and last < prev and r < 50:
             conf = 6
             if v.iloc[-1] / v_avg > 2.0: conf += 1
             if r < 40: conf += 1
             if last < range_l * 0.997: conf += 1
+            # BETTER ENTRY: place limit AT the range low (breakout level).
+            entry_zone = float(range_l)  # retest the breakdown level
             return Signal(self.name, sym, "short", min(10, conf), self.profile,
                           f"QuickScalp break 2-bar low | vol {v.iloc[-1]/v_avg:.1f}x | RSI {r:.0f}",
-                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val})
+                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val,
+                           "entry_zone": entry_zone})
         
         return None
 
@@ -7058,6 +7094,21 @@ class Executor:
                     log.info(f"PRE-POSITION {sig.symbol} short: limit at zone {zone_price:.6f} "
                              f"(was {limit_price:.6f}, mid {price:.6f})")
                     limit_price = float(zone_price)
+            # ENTRY ZONE for scalpers (2026-06-10: Saad said entries matter for scalp).
+            # Scalp agents now pass entry_zone in metadata (VWAP for mean-reversion,
+            # swept level for liquidity sweep, breakout level for quick scalper).
+            # Snaps limit to the zone on the passive side -- let price come to us.
+            entry_zone = sig.metadata.get("entry_zone") if sig.metadata else None
+            if entry_zone and entry_zone > 0:
+                zone_ok = False
+                if sig.side == "long" and entry_zone < price and (price - entry_zone) / price <= 0.015:
+                    zone_ok = True
+                elif sig.side == "short" and entry_zone > price and (entry_zone - price) / price <= 0.015:
+                    zone_ok = True
+                if zone_ok:
+                    log.info(f"ZONE-ENTRY {sig.symbol} {sig.side}: limit at entry_zone {entry_zone:.6f} "
+                             f"(was {limit_price:.6f}, mid {price:.6f})")
+                    limit_price = float(entry_zone)
             # FIB-AWARE LIMIT PLACEMENT (2026-05-06 — Saad's directive after fibonacci agent
             # outperformed). If a Fibonacci retracement level sits within 0.5% of price on
             # the PASSIVE side of the book, snap the limit there instead of a flat 2-tick
