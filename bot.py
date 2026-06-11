@@ -499,6 +499,7 @@ GOLD_BUFF_HOURS           = set()   # neutralized
 # TradingView strategy name → profile key (add entries to customise per-strategy TP/SL)
 TV_STRATEGY_PROFILES: Dict[str, str] = {
     # Every agent gets a TV strategy name — TradingView alerts can trigger ANY agent
+    # 2026-06-10: KILLED losing TV strategies - stoch_rsi (-$32.79), us_open_momentum (-$20.21)
     "rsi_oversold":  "meanrev",
     "rsi_overbought": "meanrev",
     "fib_786_long":   "fibonacci",
@@ -509,36 +510,15 @@ TV_STRATEGY_PROFILES: Dict[str, str] = {
     "wedge_rising_short":  "meanrev",
     "btc_dom_alt_short":   "trend_pullback",
     "log_channel_long":    "trend_pullback",
-    # All live agents can receive TV alerts directly
-    "stoch_rsi_long":     "stoch_rsi",
-    "stoch_rsi_short":    "stoch_rsi",
-    "funding_extreme_short": "meanrev",
-    "funding_extreme_long":  "meanrev",
+    # BAD STRATEGIES - removed from webhook
+    # stoch_rsi - killed after losing -$32.79 in one day
+    # us_open_momentum - killed after losing -$20.21 in one day
     "macd_cross_long":    "macd_cross",
     "macd_cross_short":   "macd_cross",
     "fibonacci_long":     "fibonacci",
     "fibonacci_short":    "fibonacci",
-    "golden_hour_long":   "golden_hour",
-    "golden_hour_short":  "golden_hour",
-    "asian_session_long":  "asian",
-    "asian_session_short": "asian",
-    "metals_scalp_long":  "metals",
-    "metals_scalp_short": "metals",
-    "xmr_meanrev_long":   "xmr",
-    "xmr_meanrev_short":  "xmr",
-    "us_open_momentum_long":  "us_open",
-    "us_open_momentum_short": "us_open",
     "atr_breakout_long":  "atr_momentum",
     "atr_breakout_short": "atr_momentum",
-    "keltner_squeeze_long":  "keltner",
-    "keltner_squeeze_short": "keltner",
-    "viki_long":          "viki",
-    "viki_short":         "viki",
-    "short_bias_short":     "short_bias",
-    "atr_breakout_long":    "atr_momentum",
-    "atr_breakout_short":   "atr_momentum",
-    "funding_fade_v2_short": "funding_v2",
-    "funding_fade_v2_long":  "funding_v2",
 }
 TV_DEFAULT_PROFILE = "meanrev"
 

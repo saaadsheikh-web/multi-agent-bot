@@ -1,25 +1,25 @@
 # Hermes Research Brief
 
-**Updated:** 2026-06-09T19:15:34.585348+00:00
+**Updated:** 2026-06-10T22:46:37.342407+00:00
 **Macro bias:** neutral
 
-**Market Read:** Neutral macro, mixed signals — BTC accumulation vs. broad alt weakness.
+**MARKET READ:** Mixed macro with heavy selling pressure on BTC, ETH, XRP — no clear catalyst.
 
-**Coins to Watch:**
-- **ENA** (+0.33 score) — Janus Henderson backing is a strong institutional nod; watch for USDe distribution catalyst.
-- **AAVE** (-0.67 score) — Down 2.6% with no positive news; avoid until momentum shifts.
-- **BTC** (+0.33 score) — Strategy bought 1,550 BTC; accumulation supports price floor.
+**COINS TO WATCH:**
+- **XRP** – Broke support, -4.5% drop. Watch for further downside if selling continues.
+- **ETH** – $1K crash risk if key support fails. Futures traders may step in.
+- **BTC** – Charts hint at drop to $50K. No bottom signal yet.
 
-**Risk to Avoid:** Our live edge bots are all losing (total -$11.3). Do not follow automated signals today — low win rate.
+**RISK TO AVOID:** All agents losing money except liquidity_sweep. Avoid chasing breakouts or scalps today.
 
-BIAS: neutral
+BIAS: bearish
 
 ---
 ## Raw inputs
 
 **News:**
-- ENA: score +0.33 (1 hits) — Ethena lands Janus Henderson backing as asset manager invests in ENA, eyes USDe distributi
-- AAVE: score -0.67 (1 hits) — CoinDesk 20 performance update: AAVE Drops 2.6% as all constituents trade lower
-- BTC: score +0.33 (3 hits) — Strategy buys 1,550 Bitcoin after controversial 32 BTC sale
+- XRP: score -0.67 (1 hits) — XRP drops 4.5% as heavy selling breaks another support level
+- ETH: score -0.33 (1 hits) — ETH crash to $1K looms if key support breaks: Will futures traders step in?
+- BTC: score -0.33 (1 hits) — Bitcoin bottom? These 4 charts hint at BTC price dropping to $50K
 
-**Agent edge:** liquidity_sweep: 1t 0%w $-0.9 | utbot_mtf: 1t 0%w $-2.5 | wide_scalp: 3t 0%w $-7.9
+**Agent edge:** liquidity_sweep: 2t 50%w $+5.7 | quick_scalp: 5t 40%w $-1.8 | utbot_mtf: 2t 0%w $-3.6 | daily_breakout_4h: 2t 0%w $-5.9 | tv_macd_cross: 1t 0%w $-7.3 | wide_scalp: 3t 0%w $-7.9 | tv_stoch_rsi: 1t 0%w $-12.6 | tv_us_open_momentum: 2t 0%w $-20.2

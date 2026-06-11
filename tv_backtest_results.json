@@ -1,0 +1,357 @@
+{
+  "timestamp": "2026-06-10T15:43:07.927962+00:00",
+  "config": {
+    "symbols": [
+      "BTC-USDT",
+      "ETH-USDT",
+      "SOL-USDT",
+      "BNB-USDT",
+      "HYPE-USDT"
+    ],
+    "agents": 14,
+    "bars": 5000
+  },
+  "summary": {
+    "asymmetric": {
+      "trades": 67,
+      "wins": 43,
+      "pnl": -34.67,
+      "coins": 4
+    },
+    "daily_breakout": {
+      "trades": 234,
+      "wins": 154,
+      "pnl": -107.06,
+      "coins": 4
+    },
+    "daily_breakout_24h": {
+      "trades": 745,
+      "wins": 470,
+      "pnl": -377.26,
+      "coins": 4
+    },
+    "daily_breakout_4h": {
+      "trades": 1344,
+      "wins": 831,
+      "pnl": -793.22,
+      "coins": 4
+    },
+    "daily_breakout_12h": {
+      "trades": 951,
+      "wins": 588,
+      "pnl": -580.9100000000001,
+      "coins": 4
+    },
+    "daily_breakout_48h": {
+      "trades": 457,
+      "wins": 286,
+      "pnl": -253.67000000000002,
+      "coins": 4
+    },
+    "wide_scalp": {
+      "trades": 1999,
+      "wins": 1211,
+      "pnl": -1293.0300000000002,
+      "coins": 4
+    },
+    "fib_confluence": {
+      "trades": 3441,
+      "wins": 2394,
+      "pnl": -474.79999999999995,
+      "coins": 4
+    },
+    "fib_bounce": {
+      "trades": 176,
+      "wins": 118,
+      "pnl": -26.779999999999998,
+      "coins": 4
+    },
+    "turtle_breakout": {
+      "trades": 1032,
+      "wins": 662,
+      "pnl": -502.13000000000005,
+      "coins": 4
+    },
+    "livermore_pivot": {
+      "trades": 876,
+      "wins": 563,
+      "pnl": -447.53999999999996,
+      "coins": 4
+    }
+  },
+  "detail": {
+    "BTC-USDT": {
+      "asymmetric": {
+        "n": 15,
+        "w": 5,
+        "wr": 33.3,
+        "ret": -14.41
+      },
+      "daily_breakout": {
+        "n": 64,
+        "w": 41,
+        "wr": 64.1,
+        "ret": -25.8
+      },
+      "daily_breakout_24h": {
+        "n": 196,
+        "w": 126,
+        "wr": 64.3,
+        "ret": -51.79
+      },
+      "daily_breakout_4h": {
+        "n": 351,
+        "w": 221,
+        "wr": 63.0,
+        "ret": -132.81
+      },
+      "daily_breakout_12h": {
+        "n": 245,
+        "w": 155,
+        "wr": 63.3,
+        "ret": -101.5
+      },
+      "daily_breakout_48h": {
+        "n": 128,
+        "w": 83,
+        "wr": 64.8,
+        "ret": -40.87
+      },
+      "wide_scalp": {
+        "n": 538,
+        "w": 340,
+        "wr": 63.2,
+        "ret": -276.62
+      },
+      "fib_confluence": {
+        "n": 866,
+        "w": 601,
+        "wr": 69.4,
+        "ret": 158.12
+      },
+      "fib_bounce": {
+        "n": 45,
+        "w": 30,
+        "wr": 66.7,
+        "ret": -4.69
+      },
+      "turtle_breakout": {
+        "n": 283,
+        "w": 181,
+        "wr": 64.0,
+        "ret": -64.11
+      },
+      "livermore_pivot": {
+        "n": 249,
+        "w": 162,
+        "wr": 65.1,
+        "ret": -66.31
+      }
+    },
+    "ETH-USDT": {
+      "asymmetric": {
+        "n": 9,
+        "w": 6,
+        "wr": 66.7,
+        "ret": 1.9
+      },
+      "daily_breakout": {
+        "n": 64,
+        "w": 43,
+        "wr": 67.2,
+        "ret": -34.34
+      },
+      "daily_breakout_24h": {
+        "n": 180,
+        "w": 114,
+        "wr": 63.3,
+        "ret": -113.43
+      },
+      "daily_breakout_4h": {
+        "n": 335,
+        "w": 210,
+        "wr": 62.7,
+        "ret": -233.97
+      },
+      "daily_breakout_12h": {
+        "n": 238,
+        "w": 152,
+        "wr": 63.9,
+        "ret": -151.04
+      },
+      "daily_breakout_48h": {
+        "n": 120,
+        "w": 78,
+        "wr": 65.0,
+        "ret": -68.81
+      },
+      "wide_scalp": {
+        "n": 556,
+        "w": 345,
+        "wr": 62.1,
+        "ret": -398.87
+      },
+      "fib_confluence": {
+        "n": 790,
+        "w": 573,
+        "wr": 72.5,
+        "ret": -42.8
+      },
+      "fib_bounce": {
+        "n": 36,
+        "w": 22,
+        "wr": 61.1,
+        "ret": -9.92
+      },
+      "turtle_breakout": {
+        "n": 241,
+        "w": 159,
+        "wr": 66.0,
+        "ret": -135.94
+      },
+      "livermore_pivot": {
+        "n": 213,
+        "w": 139,
+        "wr": 65.3,
+        "ret": -130.09
+      }
+    },
+    "SOL-USDT": {
+      "asymmetric": {
+        "n": 23,
+        "w": 16,
+        "wr": 69.6,
+        "ret": -20.52
+      },
+      "daily_breakout": {
+        "n": 54,
+        "w": 35,
+        "wr": 64.8,
+        "ret": -23.95
+      },
+      "daily_breakout_24h": {
+        "n": 185,
+        "w": 109,
+        "wr": 58.9,
+        "ret": -141.67
+      },
+      "daily_breakout_4h": {
+        "n": 324,
+        "w": 196,
+        "wr": 60.5,
+        "ret": -240.44
+      },
+      "daily_breakout_12h": {
+        "n": 235,
+        "w": 136,
+        "wr": 57.9,
+        "ret": -210.81
+      },
+      "daily_breakout_48h": {
+        "n": 106,
+        "w": 60,
+        "wr": 56.6,
+        "ret": -88.82
+      },
+      "wide_scalp": {
+        "n": 427,
+        "w": 234,
+        "wr": 54.8,
+        "ret": -443.64
+      },
+      "fib_confluence": {
+        "n": 735,
+        "w": 531,
+        "wr": 72.2,
+        "ret": -198.29
+      },
+      "fib_bounce": {
+        "n": 51,
+        "w": 35,
+        "wr": 68.6,
+        "ret": -24.97
+      },
+      "turtle_breakout": {
+        "n": 240,
+        "w": 153,
+        "wr": 63.7,
+        "ret": -142.52
+      },
+      "livermore_pivot": {
+        "n": 198,
+        "w": 125,
+        "wr": 63.1,
+        "ret": -128.29
+      }
+    },
+    "BNB-USDT": {
+      "asymmetric": {
+        "n": 20,
+        "w": 16,
+        "wr": 80.0,
+        "ret": -1.64
+      },
+      "daily_breakout": {
+        "n": 52,
+        "w": 35,
+        "wr": 67.3,
+        "ret": -22.97
+      },
+      "daily_breakout_24h": {
+        "n": 184,
+        "w": 121,
+        "wr": 65.8,
+        "ret": -70.37
+      },
+      "daily_breakout_4h": {
+        "n": 334,
+        "w": 204,
+        "wr": 61.1,
+        "ret": -186.0
+      },
+      "daily_breakout_12h": {
+        "n": 233,
+        "w": 145,
+        "wr": 62.2,
+        "ret": -117.56
+      },
+      "daily_breakout_48h": {
+        "n": 103,
+        "w": 65,
+        "wr": 63.1,
+        "ret": -55.17
+      },
+      "wide_scalp": {
+        "n": 478,
+        "w": 292,
+        "wr": 61.1,
+        "ret": -173.9
+      },
+      "fib_confluence": {
+        "n": 1050,
+        "w": 689,
+        "wr": 65.6,
+        "ret": -391.83
+      },
+      "fib_bounce": {
+        "n": 44,
+        "w": 31,
+        "wr": 70.5,
+        "ret": 12.8
+      },
+      "turtle_breakout": {
+        "n": 268,
+        "w": 169,
+        "wr": 63.1,
+        "ret": -159.56
+      },
+      "livermore_pivot": {
+        "n": 216,
+        "w": 137,
+        "wr": 63.4,
+        "ret": -122.85
+      }
+    },
+    "HYPE-USDT": {}
+  }
+}
