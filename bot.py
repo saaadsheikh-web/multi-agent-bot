@@ -7529,6 +7529,9 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
         "vwap_reversion",     # 2026-05-07: net -$1.43, faded momentum
         "wide_scalp",         # 2026-06-10 scalp backtest: -229% across all coins, 25-30% WR 💀
         "liquidity_sweep",    # 2026-06-10 scalp backtest: -9.89% combined, low trades
+        "turtle_breakout",    # 2026-06-11 TV backtest: loses on ALL TFs. 24H best was +45% but low trades
+        "quick_scalp",        # 2026-06-11 TV backtest: only 24H wins (+56%), loses -674% on 1H
+        "daily_breakout",     # 2026-06-11 TV backtest: barely wins on 5m (+0.9%), loses on every other TF
     }
     AGENT_SYM_BLACKLIST = {                       # agent, set of symbols to skip
         "connors_rsi2": {"TAO-USDT"},            # 3 losses, never wins long
