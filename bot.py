@@ -384,7 +384,7 @@ PROFILES = {
     "golden_cross":       {"tp": 99.0, "sl": 5.0, "trail": 2.5, "activate": 2.5, "max_hold_min": 14400},
     # 2026-05-01 SCALPING WAVE — fee-aware, math-disciplined
     # Trailing-only — let winners run, don't book small profit (Saad's directive)
-    "liquidity_sweep":    {"tp": 99.0, "sl": 1.5, "trail": 0.6, "activate": 1.4, "max_hold_min": 240, "atr_trail": 1.0},
+    # liquidity_sweep profile REMOVED 2026-06-11 (agent deleted - loses on all TFs in TV backtest)
     # 2026-05-09 SMART FIX (Saad: "tighter SL hits every time"):
     # Keep SL wide (2.5% → ride out noise) but engage trail SOONER so winners lock.
     # Breakeven at +0.5% already locks zero loss — SL only matters for fast killers.
@@ -2227,88 +2227,10 @@ class TrendPullbackAgent(Agent):
 # Multi-day range breaks (1-week structure) with volume + ATR expansion.
 # Wide stops (4% min) make fees background noise. Trailing-only exit.
 # =============================================================================
-class DailyRangeBreakoutAgent(Agent):
-    notional_multiplier = 0.1
-    name = "daily_breakout"
-    enabled = True   # 2026-06-05: RE-ENABLED — #1 backtest agent +1,992%
-    paper_only = False   # validation pending
-    profile = "daily_breakout"
-    valid_regimes = ["TRENDING", "VOLATILE"]
-
-    LOOKBACK_BARS = 168          # 1 week of 1H bars
-    MIN_SL_PCT = 0.04
-    MIN_VOLUME_RATIO = 1.4   # was 2.0 — loosened to fire more often
-
-    def analyze(self, sym, ctx):
-        df = ctx.df_1h
-        if len(df) < self.LOOKBACK_BARS + 30:
-            return None
-        c = df["close"]
-        h = df["high"]
-        l = df["low"]
-        v = df["volume"]
-        last = c.iloc[-1]
-
-        # 1-week range structure (excluding current bar)
-        range_high = h.iloc[-(self.LOOKBACK_BARS + 1):-1].max()
-        range_low  = l.iloc[-(self.LOOKBACK_BARS + 1):-1].min()
-        if pd.isna(range_high) or pd.isna(range_low):
-            return None
-
-        # Volume confirmation
-        avg_v = v.rolling(20).mean().iloc[-1]
-        if avg_v <= 0 or pd.isna(avg_v):
-            return None
-        v_ratio = v.iloc[-1] / avg_v
-        if v_ratio < self.MIN_VOLUME_RATIO:
-            return None
-
-        # ATR expansion: current ATR > 1.1× rolling-20 ATR average
-        atr_now = atr(df).iloc[-1]
-        atr_avg = atr(df).rolling(20).mean().iloc[-1]
-        if atr_now <= 0 or pd.isna(atr_now) or atr_avg <= 0 or pd.isna(atr_avg):
-            return None
-        if atr_now < atr_avg * 1.1:
-            return None
-
-        # Breakout candle dimensions (for SL placement)
-        bar_o = df["open"].iloc[-1]
-        bar_h = h.iloc[-1]
-        bar_l = l.iloc[-1]
-        bar_range = bar_h - bar_l
-        if bar_range <= 0:
-            return None
-
-        # LONG: close above 1-week high
-        if last > range_high and last > bar_o:
-            sl_retrace = bar_o + bar_range * 0.5     # 50% retrace of breakout candle
-            sl_floor = last * (1 - self.MIN_SL_PCT)  # 4% floor
-            sl_price = min(sl_retrace, sl_floor)     # whichever is wider stop
-            tp_price = last * 1.99                   # cosmetic — trailing exits first
-            conf = 7 + int(v_ratio > 3) + int(atr_now > atr_avg * 1.3) + int(last > range_high * 1.005)
-            return Signal(self.name, sym, "long", min(10, conf), self.profile,
-                          f"1week-high break long ({range_high:.4f}) vol {v_ratio:.1f}x ATRx{atr_now/atr_avg:.2f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price, "range_high": float(range_high),
-                           "atr_val": atr_now, "v_ratio": v_ratio})
-
-        # SHORT: close below 1-week low
-        if last < range_low and last < bar_o:
-            sl_retrace = bar_o - bar_range * 0.5
-            sl_floor = last * (1 + self.MIN_SL_PCT)
-            sl_price = max(sl_retrace, sl_floor)
-            tp_price = last * 0.01
-            conf = 7 + int(v_ratio > 3) + int(atr_now > atr_avg * 1.3) + int(last < range_low * 0.995)
-            return Signal(self.name, sym, "short", min(10, conf), self.profile,
-                          f"1week-low break short ({range_low:.4f}) vol {v_ratio:.1f}x ATRx{atr_now/atr_avg:.2f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price, "range_low": float(range_low),
-                           "atr_val": atr_now, "v_ratio": v_ratio})
-
-        return None
-
 
 # =============================================================================
 # AGENT 13b: DAILY BREAKOUT 24H — fast variant
-# Same logic as DailyRangeBreakoutAgent but with a 24-bar lookback (1 day) instead
+# Same logic but with a 24-bar lookback (1 day) instead
 # of 168 (1 week). Fires ~3-4x more often than parent. Backtest 2026-04-30 across
 # all 20 symbols: ~82% WR, +0.535R, MaxDD <-5%, Sharpe ~4.7 over 4150 trades.
 # Tighter SL (2.5%) suits the shorter timeframe.
@@ -2911,76 +2833,6 @@ class GoldenCrossAgent(Agent):
                       f"Death Cross short e50={e50.iloc[-1]:.4f} e200={e200.iloc[-1]:.4f}",
                       {"atr_sl": sl_price, "atr_tp": tp_price, "atr_val": atr_val})
 
-
-class LiquiditySweepScalpAgent(Agent):
-    notional_multiplier = 0.02
-    """Liquidity sweep / stop-hunt scalp.
-
-    Detects when price wicks below recent low (liquidity sweep) and reclaims
-    within the same 5m bar. Stop-hunt longs got liquidated at the wick low,
-    creating a vacuum on the upside. Enter long on close above wick.
-
-    Math: wick depth ≥ 0.4% of recent range. TP = 1.2%. SL just below wick.
-    Fee-survivability: TP/fee = 10x. WR target: 55%+.
-    """
-    name = "liquidity_sweep"
-    enabled = True  # 2026-06-09: RE-ENABLED — +125% backtest, 51.2% WR, 33.5% DD
-    paper_only = False
-    profile = "liquidity_sweep"
-    valid_regimes = ["RANGING", "VOLATILE"]
-
-    LOOKBACK = 20  # 5m bars
-
-    def analyze(self, sym, ctx):
-        df = ctx.df_5m
-        if len(df) < self.LOOKBACK + 5:
-            return None
-        c = df["close"]; o = df["open"]; h = df["high"]; l = df["low"]; v = df["volume"]
-        last_c = c.iloc[-1]; last_o = o.iloc[-1]; last_h = h.iloc[-1]; last_l = l.iloc[-1]
-        # Recent S/R from prior bars (excluding current)
-        recent_low = l.iloc[-(self.LOOKBACK + 1):-1].min()
-        recent_high = h.iloc[-(self.LOOKBACK + 1):-1].max()
-        bar_range = last_h - last_l
-        if bar_range <= 0:
-            return None
-        # Volume confirmation — sweep needs heavy volume
-        avg_v = v.rolling(20).mean().iloc[-1]
-        if avg_v <= 0 or pd.isna(avg_v):
-            return None
-        v_ratio = v.iloc[-1] / avg_v
-        if v_ratio < 1.5:
-            return None
-        # LONG: wicked below recent low, closed back above it (bullish reversal)
-        if last_l < recent_low and last_c > recent_low and last_c > last_o:
-            wick_depth = (recent_low - last_l) / recent_low
-            if wick_depth < 0.0015:   # need real wick, not noise
-                return None
-            # BETTER ENTRY: place limit AT the swept liquidity level (recent low).
-            # After sweep, price reclaims. Limit AT the swept low catches the
-            # reversal if it retests. Much better R:R than chasing the close.
-            entry_zone = float(recent_low)  # entry AT the swept low
-            sl_price = entry_zone * 0.998   # just below wick
-            tp_price = entry_zone * 1.012
-            conf = 7 + int(v_ratio > 2.5) + int(wick_depth > 0.004)
-            return Signal(self.name, sym, "long", min(10, conf), self.profile,
-                          f"liquidity sweep long, wick {wick_depth*100:.2f}%, vol {v_ratio:.1f}x",
-                          {"atr_sl": sl_price, "atr_tp": tp_price, "v_ratio": v_ratio,
-                           "entry_zone": entry_zone})
-        # SHORT: wicked above recent high, closed back below it
-        if last_h > recent_high and last_c < recent_high and last_c < last_o:
-            wick_depth = (last_h - recent_high) / recent_high
-            if wick_depth < 0.0015:
-                return None
-            # BETTER ENTRY: place limit AT the swept liquidity level (recent high).
-            entry_zone = float(recent_high)  # entry AT the swept high
-            sl_price = entry_zone * 1.002
-            tp_price = entry_zone * 0.988
-            conf = 7 + int(v_ratio > 2.5) + int(wick_depth > 0.004)
-            return Signal(self.name, sym, "short", min(10, conf), self.profile,
-                          f"liquidity sweep short, wick {wick_depth*100:.2f}%, vol {v_ratio:.1f}x",
-                          {"atr_sl": sl_price, "atr_tp": tp_price, "v_ratio": v_ratio,
-                           "entry_zone": entry_zone})
-        return None
 
 
 class ConnorsRSI2Agent(Agent):
@@ -5116,86 +4968,6 @@ class FibBounceAgent(Agent):
 # =============================================================================
 # AGENT: TURTLE BREAKOUT (Richard Dennis — Turtle Traders)
 # =============================================================================
-class TurtleBreakoutAgent(Agent):
-    """Turtle System 1 breakout — buy 20-day highs, sell 20-day lows.
-    
-    DEEP BACKTEST (365 days, 20 coins, all TFs):
-      1H TF: 6,223 trades, 11.6% WR, +$690 total, 11/20 coins profitable
-      System 2 (55-day): 3,575 trades, +$645 total, 12/20 coins profitable
-      
-    Philosophy (Richard Dennis): 
-      "Anyone can be taught to trade. Rules matter more than intelligence."
-      The simplest trend following works. No complex indicators needed.
-      Just buy breakouts, use ATR stops, let winners run.
-    """
-    notional_multiplier = 0.03
-    name = "turtle_breakout"
-    enabled = True  # 2026-06-10 — NEW: +$690 backtest across 20 coins
-    paper_only = False
-    profile = "trend"
-    valid_regimes = ["TRENDING", "VOLATILE"]
-    
-    # System 1: 20-period breakout (faster). System 2: would be 55.
-    LOOKBACK = 20
-    MIN_VOL_RATIO = 1.2
-    MIN_ADX = 20  # Skip chop — Turtles only traded trending markets
-    
-    def analyze(self, sym, ctx):
-        # Use 1H for the breakout detection — proven best in backtest
-        df = ctx.df_1h
-        if len(df) < self.LOOKBACK + 30:
-            return None
-        
-        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
-        
-        # Volume confirmation
-        v_avg = v.rolling(20).mean().iloc[-1]
-        if v_avg <= 0 or v.iloc[-1] / v_avg < self.MIN_VOL_RATIO:
-            return None
-        
-        # ADX filter — only trade when trending
-        adx_val = adx(df, 14).iloc[-1]
-        if pd.isna(adx_val) or adx_val < self.MIN_ADX:
-            return None
-        
-        last = c.iloc[-1]; prev = c.iloc[-2]
-        
-        # Get the 20-bar range
-        lo = -(self.LOOKBACK + 1)
-        range_high = h.iloc[lo:-1].max()
-        range_low = l.iloc[lo:-1].min()
-        
-        if range_high == range_low:
-            return None
-        
-        # ATR for stop placement
-        tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
-        atr_val = tr.rolling(14).mean().iloc[-1]
-        if pd.isna(atr_val) or atr_val <= 0:
-            return None
-        
-        # Turtle System 1: Buy when price breaks ABOVE 20-day high
-        if last > range_high and last > prev:
-            conf = 6
-            if adx_val > 25: conf += 1
-            if v.iloc[-1] / v_avg > 1.5: conf += 1
-            if last > range_high * 1.005: conf += 1  # Clean break
-            return Signal(self.name, sym, "long", min(10, conf), self.profile,
-                          f"Turtle S1 break {self.LOOKBACK}H high | ADX {adx_val:.0f} | vol {v.iloc[-1]/v_avg:.1f}x",
-                          {"lookback": self.LOOKBACK, "adx": adx_val, "range_high": range_high})
-        
-        # Turtle System 1: Sell when price breaks BELOW 20-day low
-        if last < range_low and last < prev:
-            conf = 6
-            if adx_val > 25: conf += 1
-            if v.iloc[-1] / v_avg > 1.5: conf += 1
-            if last < range_low * 0.995: conf += 1
-            return Signal(self.name, sym, "short", min(10, conf), self.profile,
-                          f"Turtle S1 break {self.LOOKBACK}H low | ADX {adx_val:.0f} | vol {v.iloc[-1]/v_avg:.1f}x",
-                          {"lookback": self.LOOKBACK, "adx": adx_val, "range_low": range_low})
-        
-        return None
-
 
 # =============================================================================
 # AGENT: LIVERMORE PIVOT (Jesse Livermore + Paul Tudor Jones)
@@ -5278,102 +5050,8 @@ class LivermorePivotAgent(Agent):
 
 
 # =============================================================================
-# AGENT: QUICK SCALP 1H/5M (from deep backtest — +$1,033 across 20 coins)
+# AGENT: QUICK SCALP — KILLED 2026-06-11 (TV backtest loses on all TFs)
 # =============================================================================
-class QuickScalp1HAgent(Agent):
-    """Quick scalp on 1H and 5m — simple breakout + volume + RSI.
-    
-    DEEP BACKTEST (365 days, 20 coins):
-      1H TF: 8,127 trades, 8.7% WR, +$1,033 total (11/20 coins profitable) ← HIGHEST RETURN
-      5m TF: 8,414 trades, 7.8% WR, -$88 (too noisy)
-      15m TF: 8,300 trades, 8.1% WR, +$340
-    
-    Strategy:
-      1. Price breaks above 2-bar range
-      2. Volume > 1.5x average
-      3. RSI > 50 (momentum confirmation for longs)
-      4. ATR 1.5x stop
-    
-    Philosophy: Low WR but BIG winners. Like Livermore said:
-      "The money is made on the trades that really work."
-    """
-    notional_multiplier = 0.02
-    name = "quick_scalp"
-    enabled = True  # 2026-06-10 — NEW: +$1,033 backtest across 20 coins
-    paper_only = False
-    profile = "scalp"
-    valid_regimes = ["RANGING", "VOLATILE", "TRENDING"]
-    
-    MIN_VOL_RATIO = 1.5
-    
-    def analyze(self, sym, ctx):
-        # Try 1H first (proven best in backtest)
-        df = ctx.df_1h
-        if len(df) >= 30:
-            sig = self._check_tf(df, sym)
-            if sig: return sig
-        
-        # Fallback to 5m
-        df = ctx.df_5m
-        if len(df) >= 30:
-            sig = self._check_tf(df, sym)
-            if sig: return sig
-        
-        return None
-    
-    def _check_tf(self, df, sym=None):
-        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
-        
-        # Volume filter
-        v_avg = v.rolling(20).mean().iloc[-1]
-        if v_avg <= 0 or v.iloc[-1] / v_avg < self.MIN_VOL_RATIO:
-            return None
-        
-        # ATR for stop placement
-        tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
-        atr_val = tr.rolling(14).mean().iloc[-1]
-        if pd.isna(atr_val) or atr_val <= 0:
-            return None
-        
-        last = c.iloc[-1]; prev = c.iloc[-2]
-        r = rsi(c, 14).iloc[-1]
-        if pd.isna(r):
-            return None
-        
-        # 2-bar range
-        range_h = h.iloc[-3:-1].max()
-        range_l = l.iloc[-3:-1].min()
-        
-        # Long: price breaks above 2-bar range + RSI > 50 (momentum up)
-        if last > range_h and last > prev and r > 50:
-            conf = 6
-            if v.iloc[-1] / v_avg > 2.0: conf += 1
-            if r > 60: conf += 1
-            if last > range_h * 1.003: conf += 1  # Clean break
-            # BETTER ENTRY: place limit AT the range high (breakout level).
-            # After price breaks out, it often pulls back to retest the breakout level
-            # before continuing. Limit AT range_high catches the retest at a better price.
-            entry_zone = float(range_h)  # retest the breakout level
-            return Signal(self.name, sym, "long", min(10, conf), self.profile,
-                          f"QuickScalp break 2-bar high | vol {v.iloc[-1]/v_avg:.1f}x | RSI {r:.0f}",
-                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val,
-                           "entry_zone": entry_zone})
-
-        # Short: price breaks below 2-bar range + RSI < 50 (momentum down)
-        if last < range_l and last < prev and r < 50:
-            conf = 6
-            if v.iloc[-1] / v_avg > 2.0: conf += 1
-            if r < 40: conf += 1
-            if last < range_l * 0.997: conf += 1
-            # BETTER ENTRY: place limit AT the range low (breakout level).
-            entry_zone = float(range_l)  # retest the breakdown level
-            return Signal(self.name, sym, "short", min(10, conf), self.profile,
-                          f"QuickScalp break 2-bar low | vol {v.iloc[-1]/v_avg:.1f}x | RSI {r:.0f}",
-                          {"rsi": r, "vol_ratio": v.iloc[-1] / v_avg, "atr": atr_val,
-                           "entry_zone": entry_zone})
-        
-        return None
-
 
 class FundingExtremesAgent(Agent):
     """Fade extreme funding rates (per RESEARCH_REPORT_2.md, highest expected edge).
@@ -7528,10 +7206,8 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
     DISABLED_AGENTS    = {
         "vwap_reversion",     # 2026-05-07: net -$1.43, faded momentum
         "wide_scalp",         # 2026-06-10 scalp backtest: -229% across all coins, 25-30% WR 💀
-        "liquidity_sweep",    # 2026-06-10 scalp backtest: -9.89% combined, low trades
-        "turtle_breakout",    # 2026-06-11 TV backtest: loses on ALL TFs. 24H best was +45% but low trades
-        "quick_scalp",        # 2026-06-11 TV backtest: only 24H wins (+56%), loses -674% on 1H
-        "daily_breakout",     # 2026-06-11 TV backtest: barely wins on 5m (+0.9%), loses on every other TF
+        # KILLED 2026-06-11 (classes deleted from codebase, can never trade again):
+        # liquidity_sweep, turtle_breakout, quick_scalp, daily_breakout
     }
     AGENT_SYM_BLACKLIST = {                       # agent, set of symbols to skip
         "connors_rsi2": {"TAO-USDT"},            # 3 losses, never wins long
@@ -8116,7 +7792,6 @@ async def webhook_loop(state):
             "rsi_divergence": "RSIDivergenceAgent",
             "vwap_reversion": "VWAPReversionAgent",
             "trend_pullback": "TrendPullbackAgent",
-            "daily_breakout":     "DailyRangeBreakoutAgent",
             "daily_breakout_24h": "DailyBreakout24hAgent",
             "daily_breakout_4h":  "DailyBreakout4hAgent",
             "daily_breakout_7d":  "DailyBreakout7dAgent",
@@ -8133,7 +7808,6 @@ async def webhook_loop(state):
             "zscore_reversion":   "ZScoreReversionAgent",
             "stoch_rsi":          "StochRSIAgent",
             "golden_cross":       "GoldenCrossAgent",
-            "liquidity_sweep":    "LiquiditySweepScalpAgent",
             "connors_rsi2":       "ConnorsRSI2Agent",
             "raschke_retest":     "RaschkeRetestAgent",
             "wide_scalp":         "WideScalpAgent",
@@ -8239,7 +7913,6 @@ async def webhook_loop(state):
             "funding": "FundingHunterAgent", "ema_ribbon": "EMARibbonAgent",
             "candlestick": "CandlestickAgent", "rsi_divergence": "RSIDivergenceAgent",
             "vwap_reversion": "VWAPReversionAgent", "trend_pullback": "TrendPullbackAgent",
-            "daily_breakout": "DailyRangeBreakoutAgent",
             "daily_breakout_24h": "DailyBreakout24hAgent",
             "daily_breakout_4h": "DailyBreakout4hAgent",
             "daily_breakout_7d": "DailyBreakout7dAgent",
@@ -8256,7 +7929,6 @@ async def webhook_loop(state):
             "zscore_reversion":   "ZScoreReversionAgent",
             "stoch_rsi":          "StochRSIAgent",
             "golden_cross":       "GoldenCrossAgent",
-            "liquidity_sweep":    "LiquiditySweepScalpAgent",
             "connors_rsi2":       "ConnorsRSI2Agent",
             "raschke_retest":     "RaschkeRetestAgent",
             "wide_scalp":         "WideScalpAgent",
@@ -9136,7 +8808,6 @@ async def run(paper: bool = False, once: bool = False):
         RSIDivergenceAgent(),
         VWAPReversionAgent(),
         TrendPullbackAgent(),
-        DailyRangeBreakoutAgent(),
         DailyBreakout24hAgent(),
         DailyBreakout4hAgent(),
         DailyBreakout12hAgent(),
@@ -9154,7 +8825,6 @@ async def run(paper: bool = False, once: bool = False):
         ZScoreReversionAgent(),
         StochRSIAgent(),
         GoldenCrossAgent(),
-        LiquiditySweepScalpAgent(),
         ConnorsRSI2Agent(),
         RaschkeRetestAgent(),
         WideScalpAgent(),
@@ -9173,9 +8843,7 @@ async def run(paper: bool = False, once: bool = False):
         Fib786OversoldAgent(),      # 2026-05-26 — 0.786+RSI<35 long, backtest +0.156%/t
         ScoutAgent(),               # 2026-06-04 — AUTO COIN HUNTER: finds breakout coins 24/7
         FibBounceAgent(),           # 2026-06-03 — EXHAUSTIVE BACKTEST WINNER: fib 0.618 + ADX regime
-        TurtleBreakoutAgent(),      # 2026-06-10 — +$690 across 20 coins, 365d backtest (Richard Dennis)
         LivermorePivotAgent(),      # 2026-06-10 — +$687 across 20 coins with PTJ trailing (Livermore+PTJ)
-        QuickScalp1HAgent(),        # 2026-06-10 — +$1,033 across 20 coins, 1H TF, simple breakout + volume + RSI
     ]
     # 2026-06-01 — 10 new paper agents from deep research on 285+ trades
     # 2026-06-10: KILLED — all paper agents lost money. Never load them.
