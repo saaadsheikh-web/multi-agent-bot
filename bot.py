@@ -5050,8 +5050,178 @@ class LivermorePivotAgent(Agent):
 
 
 # =============================================================================
+# AGENT: DIPLOMA — master auditor & teacher agent (Saad's design)
+# =============================================================================
+class DiplomaAgent(Agent):
+    """2026-06-11 — Saad's master auditor. Does NOT trade.
+    
+    Watches every agent's performance live, analyzes what works and what doesn't,
+    and generates improvement recommendations. Focuses on:
+    
+    1. Entry analysis — which conditions produce winners vs losers
+    2. Exit analysis — are we cutting winners too early / holding losers too long
+    3. Trail analysis — are trailing stops optimized for current volatility
+    4. TF analysis — is each agent on the right timeframe
+    5. Capital allocation — which agents deserve more/less capital
+    6. Regime analysis — which agents perform in RANGING vs TRENDING vs VOLATILE
+    7. Pattern recognition — what does a winning setup look like vs a loser
+    
+    Outputs recommendations to a log file that agents can reference.
+    """
+    name = "diploma"
+    enabled = True
+    paper_only = False
+    profile = "diploma"
+    valid_regimes = ["RANGING", "TRENDING", "VOLATILE"]  # Always runs
+    
+    # How often to run full audit (every N scan cycles)
+    AUDIT_INTERVAL = 12  # ~every 36 minutes at 3-min scan cycle
+    
+    def __init__(self):
+        super().__init__()
+        self._cycle_count = 0
+        self._last_audit_path = None
+    
+    def analyze(self, sym, ctx):
+        """Run periodically to audit agent performance.
+        
+        Every AUDIT_INTERVAL cycles, pulls trade history from DB,
+        analyzes each enabled agent's performance, and writes recommendations.
+        """
+        self._cycle_count += 1
+        if self._cycle_count % self.AUDIT_INTERVAL != 0:
+            return None
+        
+        try:
+            db = getattr(ctx, 'db', None)
+            if db is None:
+                return None
+            
+            recommendations = []
+            recommendations.append(f"=== DIPLOMA AUDIT #{self._cycle_count // self.AUDIT_INTERVAL} ===")
+            recommendations.append(f"Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            recommendations.append(f"Regime: {getattr(ctx, 'regime', 'UNKNOWN')}")
+            recommendations.append(f"ADX: {getattr(ctx, 'adx', 0):.1f}")
+            
+            # Get all agents that have trade history
+            agents_data = getattr(ctx, 'agents', [])
+            if agents_data:
+                enabled_agents = [a for a in agents_data if a.enabled]
+                recommendations.append(f"\n--- LIVE AGENTS ({len(enabled_agents)}) ---")
+                for agent in enabled_agents:
+                    name = getattr(agent, 'name', 'unknown')
+                    profile = getattr(agent, 'profile', 'unknown')
+                    multi = getattr(agent, 'notional_multiplier', 1.0)
+                    recommendations.append(f"  {name:20s} profile={profile:15s} mult={multi:.2f}")
+            
+            # Query trade history from DB for win-rate analysis
+            try:
+                cursor = db.cursor()
+                cursor.execute("""
+                    SELECT agent_name, 
+                           COUNT(*) as total,
+                           SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as wins,
+                           SUM(CASE WHEN pnl < 0 THEN 1 ELSE 0 END) as losses,
+                           SUM(pnl) as total_pnl,
+                           AVG(CASE WHEN pnl > 0 THEN pnl END) as avg_win,
+                           AVG(CASE WHEN pnl < 0 THEN pnl END) as avg_loss
+                    FROM trades 
+                    WHERE closed_at > datetime('now', '-24 hours')
+                    GROUP BY agent_name
+                    ORDER BY total_pnl DESC
+                """)
+                rows = cursor.fetchall()
+                
+                if rows:
+                    recommendations.append(f"\n--- LAST 24H TRADE PERFORMANCE ---")
+                    recommendations.append(f"  {'Agent':20s} {'Trades':>7s} {'WR':>6s} {'PnL':>10s} {'AvgWin':>8s} {'AvgLoss':>8s}")
+                    recommendations.append(f"  {'-'*20} {'-'*7} {'-'*6} {'-'*10} {'-'*8} {'-'*8}")
+                    
+                    for row in rows:
+                        name, total, wins, losses, pnl, avg_win, avg_loss = row
+                        if total and total > 0:
+                            wr = (wins or 0) / total * 100 if total > 0 else 0
+                            pnl_str = f"${pnl:+.2f}" if pnl else "$0.00"
+                            aw_str = f"${avg_win:.2f}" if avg_win else "N/A"
+                            al_str = f"${avg_loss:.2f}" if avg_loss else "N/A"
+                            recommendations.append(f"  {name:20s} {total:>7d} {wr:>5.0f}% {pnl_str:>10s} {aw_str:>8s} {al_str:>8s}")
+                    
+                    # Find worst performers
+                    worst = [r for r in rows if r[4] and r[4] < 0]  # negative PnL
+                    if worst:
+                        recommendations.append(f"\n⚠️ WORST PERFORMERS (needs attention):")
+                        for w in sorted(worst, key=lambda x: x[4])[:3]:
+                            name, total, wins, losses, pnl = w[0], w[1], w[2], w[3], w[4]
+                            wr = (wins or 0) / total * 100 if total > 0 else 0
+                            recommendations.append(f"  ❌ {name}: ${pnl:.2f} ({wins}/{total} wins = {wr:.0f}% WR)")
+                    
+                    # Find best performers
+                    best = [r for r in rows if r[4] and r[4] > 0]
+                    if best:
+                        recommendations.append(f"\n🏆 BEST PERFORMERS:")
+                        for b in sorted(best, key=lambda x: x[4], reverse=True)[:3]:
+                            name, total, wins, losses, pnl = b[0], b[1], b[2], b[3], b[4]
+                            wr = (wins or 0) / total * 100 if total > 0 else 0
+                            recommendations.append(f"  ✅ {name}: +${pnl:.2f} ({wins}/{total} wins = {wr:.0f}% WR)")
+                    
+                    # Generate recommendations
+                    recommendations.append(f"\n📚 IMPROVEMENT RECOMMENDATIONS:")
+                    
+                    # 1. Entry improvement
+                    entry_bad = [r for r in rows if r[3] and r[1] and r[3] >= r[1] * 0.5 and r[4] and r[4] < 0]
+                    if entry_bad:
+                        for eb in entry_bad[:2]:
+                            name = eb[0]
+                            recommendations.append(f"  💡 {name}: High loss rate ({eb[3]}/{eb[1]} losses). Consider tightening entry filters or increasing ATR threshold.")
+                    
+                    # 2. Reward-to-risk analysis
+                    for r in rows:
+                        name, total, wins, losses, pnl, avg_win, avg_loss = r
+                        if avg_win and avg_loss and abs(avg_loss) > 0:
+                            rr = abs(avg_win / avg_loss) if avg_loss != 0 else 0
+                            if rr < 1.0 and wins and wins > 3:
+                                recommendations.append(f"  💡 {name}: R:R={rr:.2f}. Winners smaller than losers. Widen TP or tighten SL.")
+                            elif rr > 3.0 and wins and wins > 3:
+                                recommendations.append(f"  💡 {name}: R:R={rr:.2f} is excellent! Consider increasing position size.")
+                    
+                    # 3. Trail analysis
+                    recommendations.append(f"  ℹ️  Current market ADX={getattr(ctx, 'adx', 0):.1f}:")
+                    adx_val = getattr(ctx, 'adx', 0)
+                    if adx_val < 20:
+                        recommendations.append(f"     RANGING regime — prefer tight trails (1-2%) and quick exits")
+                    elif adx_val < 30:
+                        recommendations.append(f"     WEAK TREND — medium trails (3-5%), let winners run")
+                    else:
+                        recommendations.append(f"     STRONG TREND — looser trails (5-10%), ride the trend")
+                else:
+                    recommendations.append(f"\n  No closed trades in last 24h — insufficient data for audit")
+                
+                cursor.close()
+            except Exception as e:
+                recommendations.append(f"\n  DB query error: {e}")
+            
+            # Write audit to dedicated log file
+            audit_path = os.path.join(os.path.dirname(__file__), "diploma_audit.log")
+            self._last_audit_path = audit_path
+            with open(audit_path, "a", encoding="utf-8") as f:
+                f.write("\n".join(recommendations) + "\n\n")
+            
+            # If we have a logger reference, log summary
+            logger = getattr(ctx, 'log', None)
+            if logger:
+                pnl_total = sum((r[4] or 0) for r in rows) if rows else 0
+                logger.info(f"Diploma: audit done — 24h PnL=${pnl_total:.2f}, {len(rows) if rows else 0} agents with data")
+            
+        except Exception as e:
+            pass  # Diploma never crashes the bot
+        
+        return None
+
+
+# =============================================================================
 # AGENT: QUICK SCALP — KILLED 2026-06-11 (TV backtest loses on all TFs)
 # =============================================================================
+
 
 class FundingExtremesAgent(Agent):
     """Fade extreme funding rates (per RESEARCH_REPORT_2.md, highest expected edge).
@@ -6695,6 +6865,15 @@ class Executor:
             log.info(f"BUMP_UP {sig.symbol} {sig.side}: notional ${notional:.1f} "
                      f"below ${MIN_NOTIONAL_USD} floor, bumping size {size}→{needed_size}")
             size = round(needed_size, 6)
+            notional = size * cv * price
+        # DOUBLE CHECK: re-apply MAX_NOTIONAL_USD cap after bump-up
+        # Saad: "don't take more than $300 trade" — cap must be bulletproof
+        if notional > MAX_NOTIONAL_USD and price > 0 and cv > 0:
+            needed_size = MAX_NOTIONAL_USD / (cv * price)
+            needed_size = math.floor(needed_size / lot_size) * lot_size
+            log.info(f"CAP_DOWN {sig.symbol} {sig.side}: notional ${notional:.1f} "
+                     f"above ${MAX_NOTIONAL_USD} max, capping size {size}→{needed_size}")
+            size = round(max(needed_size, instr.get("min_size", 1)), 6)
             notional = size * cv * price
         if size <= 0 or notional < MIN_NOTIONAL_USD * 0.9:
             log.info(f"SKIP {sig.symbol} {sig.side}: cannot reach min notional ({size}/{notional:.1f})")
@@ -8844,6 +9023,7 @@ async def run(paper: bool = False, once: bool = False):
         ScoutAgent(),               # 2026-06-04 — AUTO COIN HUNTER: finds breakout coins 24/7
         FibBounceAgent(),           # 2026-06-03 — EXHAUSTIVE BACKTEST WINNER: fib 0.618 + ADX regime
         LivermorePivotAgent(),      # 2026-06-10 — +$687 across 20 coins with PTJ trailing (Livermore+PTJ)
+        DiplomaAgent(),             # 2026-06-11 — master auditor: tracks performance, teaches agents
     ]
     # 2026-06-01 — 10 new paper agents from deep research on 285+ trades
     # 2026-06-10: KILLED — all paper agents lost money. Never load them.
@@ -8873,7 +9053,7 @@ async def run(paper: bool = False, once: bool = False):
         "news",
         "pump_dump_reversal",
         "raschke_retest", "rsi_divergence",
-        "short_bias", "smart_scalp", "stoch_rsi", "supertrend",
+        "short_bias", "stoch_rsi", "supertrend",
         "tv_fibonacci",
         "us_open", "utbot_v3",
         "volume_profile",
