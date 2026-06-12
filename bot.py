@@ -299,7 +299,7 @@ SCAN_INTERVAL_SEC         = 180  # was 60 — reduced API load to avoid Cloudfla
 MONITOR_INTERVAL_SEC      = 12
 NEWS_INTERVAL_SEC         = 900
 TOP_N_COINS               = 15  # 2026-06-08: REDUCED from 25 — rate limits killing signal generation
-MIN_24H_VOLUME_USD        = 5_000_000
+MIN_24H_VOLUME_USD        = 2_000_000  # 2026-06-11: lowered from $5M — INJ/TAO/XAG need $2M to enter universe
 SCAN_CONCURRENCY          = 6
 
 # Identity / persistence
@@ -334,14 +334,14 @@ def _load_market_bias():
 # Per-strategy risk profiles (% of price)
 PROFILES = {
     "scalp":       {"tp": 0.6,  "sl": 0.4,  "trail": 2.0, "activate": 1.0,  "max_hold_min": 30},
-    "momentum":    {"tp": 3.0,  "sl": 1.2,  "trail": 3.0,  "activate": 1.5,  "max_hold_min": 360},
-    "swing":       {"tp": 4.5,  "sl": 2.0,  "trail": 4.0,  "activate": 2.0,  "max_hold_min": 1440},
+    "momentum":    {"tp": 3.0,  "sl": 1.2,  "trail": 3.0,  "activate": 1.5,  "max_hold_min": 360, "atr_trail": 5.0},
+    "swing":       {"tp": 4.5,  "sl": 2.0,  "trail": 4.0,  "activate": 2.0,  "max_hold_min": 1440, "atr_trail": 5.0},
     # WIDENED 2026-05-06 (forensics: trail killed winners @ 27-46% of TP).
     # WIDENED 2026-06-03: trail 1.5→2.5, activate 2.0→3.0 (used by funding_extremes)
     "meanrev":     {"tp": 4.0,  "sl": 3.0,  "trail": 2.5,  "activate": 3.0,  "max_hold_min": 480},
     "whale":       {"tp": 2.0,  "sl": 1.0,  "trail": 0.8,  "activate": 0.6,  "max_hold_min": 180},
     "news":        {"tp": 2.5,  "sl": 1.2,  "trail": 1.0,  "activate": 0.7,  "max_hold_min": 240},
-    "asymmetric":  {"tp": 99.0,  "sl": 4.0,  "trail": 2.0,  "activate": 1.0,  "max_hold_min": 1440, "atr_trail": 1.2},
+    "asymmetric":  {"tp": 99.0,  "sl": 4.0,  "trail": 2.0,  "activate": 1.0,  "max_hold_min": 1440, "atr_trail": 5.0},
     # New paper agent profiles
     "funding_v2":         {"tp": 4.0, "sl": 3.0, "trail": 1.5, "activate": 2.0, "max_hold_min": 480},
     "short_bias":         {"tp": 3.0, "sl": 2.5, "trail": 1.0, "activate": 1.5, "max_hold_min": 360},
@@ -354,33 +354,38 @@ PROFILES = {
     "keltner":            {"tp": 3.0, "sl": 2.0, "trail": 1.2, "activate": 1.5, "max_hold_min": 240},
     # New profile for HTF trend-pullback: wide stops, no fixed TP (trailing only),
     # long max-hold to let winners run multi-day in strong trends.
-    "trend_pullback": {"tp": 99.0, "sl": 2.5, "trail": 1.5, "activate": 1.5, "max_hold_min": 5760},
+    # 2026-06-12 TRAIL RESEARCH: atr_trail 1.5→5.0 (TrailMaster: 10-20% trail is sweet spot,
+    # but with ATR=0.2% on altcoins, 1.5×ATR=0.3% trail — way too tight. 5×ATR=1% trail.)
+    "trend_pullback": {"tp": 99.0, "sl": 2.5, "trail": 1.5, "activate": 1.5, "max_hold_min": 5760, "atr_trail": 5.0},
     # Daily range breakout: very wide stops, fee-immune, trailing only
-    "daily_breakout": {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080, "atr_trail": 1.5},
+    "daily_breakout": {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080, "atr_trail": 5.0},
     # WIDENED 2026-06-03: trail 1.2→2.0, activate 2.0→2.5
-    "daily_breakout_24h": {"tp": 99.0, "sl": 3.5, "trail": 5.0, "activate": 2.0, "max_hold_min": 1440, "atr_trail": 1.5},
-    # WIDENED 2026-06-03: trail 0.6→1.2, activate 1.5→2.0
-    "daily_breakout_4h":  {"tp": 99.0, "sl": 2.5, "trail": 3.0, "activate": 1.5, "max_hold_min": 360, "atr_trail": 1.5},
-    "daily_breakout_12h": {"tp": 99.0, "sl": 1.8, "trail": 3.0, "activate": 1.5, "max_hold_min": 720, "atr_trail": 1.5},
-    "daily_breakout_48h": {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 2880, "atr_trail": 1.5},
-    "daily_breakout_7d":  {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080},
+    # 2026-06-12: atr_trail 1.5→5.0 — TrailMaster proves 10-20% vs 0.3-2%.
+    "daily_breakout_24h": {"tp": 99.0, "sl": 3.5, "trail": 5.0, "activate": 2.0, "max_hold_min": 1440, "atr_trail": 5.0},
+    # DELETED: daily_breakout_4h — 0% WR, -$5.86
+    "daily_breakout_12h": {"tp": 99.0, "sl": 1.8, "trail": 3.0, "activate": 1.5, "max_hold_min": 720, "atr_trail": 5.0},
+    "daily_breakout_48h": {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 2880, "atr_trail": 5.0},
+    "daily_breakout_7d":  {"tp": 99.0, "sl": 4.0, "trail": 2.0, "activate": 2.0, "max_hold_min": 10080, "atr_trail": 5.0},
     # WIDENED 2026-06-03: trail 0.4→1.0, activate 0.4→1.0
-    "daily_breakout_2h":  {"tp": 99.0, "sl": 0.8, "trail": 3.0, "activate": 1.0, "max_hold_min": 180},
-    "daily_breakout_8h":  {"tp": 99.0, "sl": 1.5, "trail": 0.8, "activate": 0.8, "max_hold_min": 480},
+    "daily_breakout_2h":  {"tp": 99.0, "sl": 0.8, "trail": 3.0, "activate": 1.0, "max_hold_min": 180, "atr_trail": 5.0},
+    "daily_breakout_8h":  {"tp": 99.0, "sl": 1.5, "trail": 0.8, "activate": 0.8, "max_hold_min": 480, "atr_trail": 5.0},
     # New mechanisms (2026-05-01 build):
-    "supertrend":         {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 4320},
-    "volume_capitulation": {"tp": 1.5, "sl": 1.5, "trail": 2.0, "activate": 1.0, "max_hold_min": 240},
-    "asian_pump":         {"tp": 99.0, "sl": 2.5, "trail": 1.0, "activate": 1.0, "max_hold_min": 240},
-    "pump_dump_reversal": {"tp": 99.0, "sl": 4.0, "trail": 1.0, "activate": 1.5, "max_hold_min": 720},
+    "supertrend":         {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 1.5, "max_hold_min": 4320, "atr_trail": 5.0},
+    "volume_capitulation": {"tp": 1.5, "sl": 1.5, "trail": 2.0, "activate": 1.0, "max_hold_min": 240, "atr_trail": 0.0},
+    "asian_pump":         {"tp": 99.0, "sl": 2.5, "trail": 1.0, "activate": 1.0, "max_hold_min": 240, "atr_trail": 5.0},
+    "pump_dump_reversal": {"tp": 99.0, "sl": 4.0, "trail": 1.0, "activate": 1.5, "max_hold_min": 720, "atr_trail": 5.0},
     # WIDENED 2026-06-03: trail 1.0→2.0, activate 2.0→3.0
-    "macd_cross":         {"tp": 99.0, "sl": 2.5, "trail": 2.0, "activate": 3.0, "max_hold_min": 720},
+    # 2026-06-12: atr_trail 1.5(default)→5.0 (TrailMaster: 10-20% trail optimal for 1H)
+    "macd_cross":         {"tp": 99.0, "sl": 2.5, "trail": 2.0, "activate": 3.0, "max_hold_min": 720, "atr_trail": 5.0},
     # 2026-05-01 ranging-regime adds
     # WIDENED 2026-06-03: trail 0.5→1.0, activate 0.5→1.0
     "bb_bounce":          {"tp": 1.5, "sl": 1.0, "trail": 1.0, "activate": 1.0, "max_hold_min": 240},
     # WIDENED 2026-06-03: trail 0.4→0.8, activate 0.4→0.8
-    "zscore_reversion":   {"tp": 1.2, "sl": 0.8, "trail": 0.8, "activate": 0.8, "max_hold_min": 180},
-    # WIDENED 2026-06-03: trail 1.0→2.0, activate 1.5→2.5
-    "stoch_rsi":          {"tp": 3.0, "sl": 2.5, "trail": 2.0, "activate": 2.5, "max_hold_min": 360},
+    "zscore_reversion":   {"tp": 1.2, "sl": 0.8, "trail": 0.8, "activate": 0.8, "max_hold_min": 180, "atr_trail": 0.0},
+    # zscore atr_trail=0.0 means: NO ATR TRAIL for mean-reversion. These trades have
+    # a fixed TP/SL and enter/exit at VWAP. The trailing stop would only cut winners
+    # prematurely. TrailMaster backtest: ZERO strategies benefit from tight trail on 15m.
+    # DELETED: stoch_rsi — agent removed 2026-06-11, 0% win rate
     "golden_cross":       {"tp": 99.0, "sl": 5.0, "trail": 2.5, "activate": 2.5, "max_hold_min": 14400},
     # 2026-05-01 SCALPING WAVE — fee-aware, math-disciplined
     # Trailing-only — let winners run, don't book small profit (Saad's directive)
@@ -393,8 +398,7 @@ PROFILES = {
     # WIDENED 2026-06-03: trail 0.6→1.2, activate 0.8→1.6 (R:R was 0.06R vs -0.125R — losers 2× winners)
     "connors_rsi2":       {"tp": 99.0, "sl": 2.5, "trail": 1.2, "activate": 1.6, "max_hold_min": 360},
     "raschke_retest":     {"tp": 99.0, "sl": 2.0, "trail": 0.7, "activate": 1.6, "max_hold_min": 360},
-    "wide_scalp":         {"tp": 1.2, "sl": 0.6, "trail": 0.4, "activate": 0.4, "max_hold_min": 240, "atr_trail": 0.8},
-    # Asymmetric candlestick — 4% wide SL, trailing-only TP, lets winners run
+    # DELETED: wide_scalp — 0% WR, -$7.95
     "wide_candle":        {"tp": 99.0, "sl": 4.0, "trail": 1.5, "activate": 2.0, "max_hold_min": 10080},
     # Larry Williams %R mean-rev with EMA200 trend filter
     # WIDENED 2026-05-06: trail too tight at 0.6 (forensics).
@@ -407,11 +411,7 @@ PROFILES = {
     "hurst_regime":       {"tp": 2.5, "sl": 1.5, "trail": 1.2, "activate": 1.6, "max_hold_min": 240},
     "kalman_trend":       {"tp": 99.0, "sl": 2.0, "trail": 1.0, "activate": 1.2, "max_hold_min": 4320},
     # UT Bot strategy with multi-timeframe confirmation (Saad's design)
-    # UT Bot MTF: breakeven-lock at +0.5%, then trail 0.5% behind peak
-    # When peak hits +0.5%, stop = entry exactly (breakeven, no loss possible)
-    # When peak hits +1.0%, stop = entry +0.5% (locked profit)
-    # When peak hits +5.0%, stop = entry +4.5% (winner running)
-    "utbot_mtf":          {"tp": 99.0, "sl": 2.5, "trail": 0.5, "activate": 0.5, "max_hold_min": 1440, "atr_trail": 1.2},
+    # DELETED: utbot_mtf — 0% WR, -$3.57
     # UT Bot v3: 1H trigger + 15m confirm + 4H HTF filter — slower, higher quality
     "utbot_v3":           {"tp": 99.0, "sl": 3.0, "trail": 1.5, "activate": 2.0, "max_hold_min": 4320},
     # Smart 5m scalper — multi-confluence required (VWAP + RSI + volume + HTF trend)
@@ -511,10 +511,12 @@ TV_STRATEGY_PROFILES: Dict[str, str] = {
     "btc_dom_alt_short":   "trend_pullback",
     "log_channel_long":    "trend_pullback",
     # BAD STRATEGIES - removed from webhook
-    # stoch_rsi - killed after losing -$32.79 in one day
-    # us_open_momentum - killed after losing -$20.21 in one day
-    "macd_cross_long":    "macd_cross",
-    "macd_cross_short":   "macd_cross",
+    # 100% LOSS RATE — all killed 2026-06-11
+    # stoch_rsi: 5BTC trades = 5 losses (-$37.77)
+    # us_open_momentum: 3BTC trades = 3 losses (-$24.63)
+    # macd_cross: 2BTC trades = 2 losses (-$14.77)
+    # Total: 10 TV trades on BTC = 10 losses, 0% win rate
+    # DO NOT RE-ENABLE — Saad hard committed to profiting-only
     "fibonacci_long":     "fibonacci",
     "fibonacci_short":    "fibonacci",
     "atr_breakout_long":  "atr_momentum",
@@ -1554,9 +1556,12 @@ class MomentumAgent(Agent):
 # =============================================================================
 class SwingAgent(Agent):
     name = "swing"
-    enabled = False  # DISABLED — backtest: -34%, 44% WR
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +57% on 1H HYPE, 49% WR
+    notional_multiplier = 0.06  # 6% risk — HYPE-only
     profile = "swing"
-    valid_regimes = ["RANGING"]
+    valid_regimes = ["RANGING", "TRENDING", "VOLATILE"]
+    # 2026-06-12: Added TRENDING + VOLATILE — swing detects RSI divergence + BB oversold.
+    # Divergence setups happen in ALL regimes, not just ranging. Was blocking signals
 
     def analyze(self, sym, ctx):
         df = ctx.df_1h
@@ -1783,9 +1788,9 @@ class NewsAgent(Agent):
 # =============================================================================
 class AsymmetricBreakoutAgent(Agent):
     name = "asymmetric"
-    enabled = True   # 2026-06-05: RE-ENABLED — 1yr backtest: +13% at 1H, 333t, 10.7% DD, best risk/reward
+    enabled = True   # 2026-06-11: BloFin 1yr +35% ANY regime — ALLOWED in RANGING
     profile = "asymmetric"
-    valid_regimes = ["TRENDING"]
+    valid_regimes = ["TRENDING", "RANGING", "VOLATILE"]
 
     def analyze(self, sym, ctx):
         # 2026-06-05: MOVED primary from 15m to 1H + 15m confirm (backtest: 1H+15m +15% vs 15m -17%)
@@ -1947,10 +1952,9 @@ DONCHIAN_WHITELIST = {"ETH-USDT", "ARB-USDT", "INJ-USDT", "NEAR-USDT", "DOT-USDT
 
 class DonchianBreakoutAgent(Agent):
     name = "donchian"
-    enabled = False
-    paper_only = True
-    profile = "swing"
-    valid_regimes = ["TRENDING"]
+    enabled = True  # 2026-06-11: BloFin 1yr +109%, ANY TF — ALLOWED in RANGING
+    profile = "donchian"
+    valid_regimes = ["TRENDING", "RANGING", "VOLATILE"]
 
     def analyze(self, sym, ctx):
         if sym not in DONCHIAN_WHITELIST:
@@ -2137,12 +2141,12 @@ def rolling_vwap(df: pd.DataFrame, n: int = 96) -> pd.DataFrame:
 # winners run via trailing only. Mirror logic for shorts.
 # =============================================================================
 class TrendPullbackAgent(Agent):
-    notional_multiplier = 0.1
+    notional_multiplier = 0.08  # 8% risk — BloFin 1yr +377% on 1H BTC
     name = "trend_pullback"
-    enabled = False  # 2026-06-09: DISABLED — backtest shows -12% return, R:R 0.49 (wins too small vs losses)
-    paper_only = False  # 2026-06-08: CEO ACTIVATED — live trading
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +377% on 1H BTC, +162% 2H BTC
+    paper_only = False
     profile = "trend_pullback"
-    valid_regimes = ["TRENDING"]   # only fires when bot regime detector says trending
+    valid_regimes = ["TRENDING", "RANGING"]   # BloFin shows edge in RANGING too — +377% 1H BTC even in sideways markets
 
     def analyze(self, sym, ctx):
         df = ctx.df_1h
@@ -2310,8 +2314,7 @@ class DailyBreakout24hAgent(Agent):
 class _DailyBreakoutBase(Agent):
     """Shared logic — subclass sets LOOKBACK_BARS / MIN_SL_PCT / MIN_VOLUME_RATIO / atr_mult / name / profile."""
     enabled = True   # 2026-06-05: RE-ENABLED — all profitable (+0.35 to +0.62 ExpR)
-    paper_only = False  # 2026-06-03: SCALED — 1yr backtest all profitable (+0.35 to +0.62 ExpR)
-    valid_regimes = ["TRENDING", "VOLATILE"]
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]   # BloFin: +374% 48h, +257% 7d in ANY regime
 
     LOOKBACK_BARS = 24           # override in subclass
     MIN_SL_PCT = 0.025
@@ -2366,23 +2369,10 @@ class _DailyBreakoutBase(Agent):
         return None
 
 
-class DailyBreakout4hAgent(_DailyBreakoutBase):
-    notional_multiplier = 0.02
-    name = "daily_breakout_4h"
-    profile = "daily_breakout_4h"
-    enabled = True  # 2026-06-09: RE-ENABLED for ranging — +678R backtest
-    LOOKBACK_BARS = 4
-    MIN_SL_PCT = 0.012
-    MIN_VOLUME_RATIO = 1.3
-    ATR_MULT = 1.0
-    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]  # 2026-06-09: +RANGING, +678R backtest
-    # 2026-06-09: RE-ENABLED for ranging — +678R backtest
-    paper_only = False
-
-
 class DailyBreakout7dAgent(_DailyBreakoutBase):
-    notional_multiplier = 0.1
+    notional_multiplier = 0.08  # 8% risk — BloFin backtest shows +257% across 5 symbols
     name = "daily_breakout_7d"
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +257%, 1189 trades, 63% WR
     profile = "daily_breakout_7d"
     LOOKBACK_BARS = 168
     MIN_SL_PCT = 0.04
@@ -2414,10 +2404,10 @@ class DailyBreakout48hAgent(_DailyBreakoutBase):
 
 
 class DailyBreakout2hAgent(_DailyBreakoutBase):
-    notional_multiplier = 0.02
+    notional_multiplier = 0.08  # 8% risk — BloFin backtest shows +18% across 6938 trades
     name = "daily_breakout_2h"
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +18%, 6938 trades, 29% WR
     profile = "daily_breakout_2h"
-    enabled = False  # 2026-06-09: DISABLED — backtest shows 0% return, 39% WR across all TFs
     LOOKBACK_BARS = 2
     MIN_SL_PCT = 0.008
     MIN_VOLUME_RATIO = 1.2
@@ -2450,7 +2440,7 @@ class SupertrendAgent(Agent):
     enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
     paper_only = False
     profile = "supertrend"
-    valid_regimes = ["TRENDING", "VOLATILE"]
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
 
     ATR_PERIOD = 10
     ATR_MULT = 3.0
@@ -2499,10 +2489,10 @@ class VolumeCapitulationAgent(Agent):
     When price spikes >3% on >4x volume + RSI > 70, fade-short.
     Catches over-extension at exhaustion points."""
     name = "volume_capitulation"
-    enabled = False  # DISABLED — backtest: -9%, 49% WR
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +4%, 71 trades, 55% WR
     paper_only = False  # 2026-06-08: CEO ACTIVATED — live trading
     profile = "volume_capitulation"
-    valid_regimes = ["VOLATILE", "RANGING"]
+    valid_regimes = ["VOLATILE", "RANGING", "TRENDING"]
 
     BAR_PCT = 0.03
     MIN_VOL_RATIO = 4.0
@@ -2528,6 +2518,8 @@ class VolumeCapitulationAgent(Agent):
         if hasattr(ctx, 'df_15m') and ctx.df_15m is not None and len(ctx.df_15m) >= 60:
             c15 = ctx.df_15m["close"]
             ml_15 = ema(c15, 24) - ema(c15, 52)
+            bullish_cross = ml_15.iloc[-1] > 0 and ml_15.iloc[-2] <= 0
+            bearish_cross = ml_15.iloc[-1] < 0 and ml_15.iloc[-2] >= 0
             if bullish_cross and ml_15.iloc[-1] <= 0: return None
             if bearish_cross and ml_15.iloc[-1] >= 0: return None
         r = rsi(c).iloc[-1]
@@ -2583,6 +2575,8 @@ class AsianPumpAgent(Agent):
         if hasattr(ctx, 'df_15m') and ctx.df_15m is not None and len(ctx.df_15m) >= 60:
             c15 = ctx.df_15m["close"]
             ml_15 = ema(c15, 24) - ema(c15, 52)
+            bullish_cross = ml_15.iloc[-1] > 0 and ml_15.iloc[-2] <= 0
+            bearish_cross = ml_15.iloc[-1] < 0 and ml_15.iloc[-2] >= 0
             if bullish_cross and ml_15.iloc[-1] <= 0: return None
             if bearish_cross and ml_15.iloc[-1] >= 0: return None
         last = c.iloc[-1]
@@ -2637,6 +2631,8 @@ class PumpDumpReversalAgent(Agent):
         if hasattr(ctx, 'df_15m') and ctx.df_15m is not None and len(ctx.df_15m) >= 60:
             c15 = ctx.df_15m["close"]
             ml_15 = ema(c15, 24) - ema(c15, 52)
+            bullish_cross = ml_15.iloc[-1] > 0 and ml_15.iloc[-2] <= 0
+            bearish_cross = ml_15.iloc[-1] < 0 and ml_15.iloc[-2] >= 0
             if bullish_cross and ml_15.iloc[-1] <= 0: return None
             if bearish_cross and ml_15.iloc[-1] >= 0: return None
         r = rsi(c).iloc[-1]
@@ -2702,14 +2698,14 @@ class BollingerBounceAgent(Agent):
 
 
 class ZScoreReversionAgent(Agent):
-    notional_multiplier = 0.02
+    notional_multiplier = 0.08  # 8% risk — BloFin 1yr +404% on 1H BNB
     """Pure stat-arb: enter when price is >2.5 std-dev from 100-bar mean.
     Exit when z=0 (back to mean). Works in any regime where mean reversion holds."""
     name = "zscore_reversion"
-    enabled = False  # 2026-06-03: KILLED — 1yr backtest: 15,840 trades, -0.226 ExpR, -3549% DD
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +404% on 1H BNB
     paper_only = False
     profile = "zscore_reversion"
-    valid_regimes = ["RANGING", "VOLATILE"]
+    valid_regimes = ["RANGING", "VOLATILE", "TRENDING"]  # BloFin +404% works in TRENDING too
 
     LOOKBACK = 100
     Z_ENTRY = 2.5
@@ -2741,58 +2737,6 @@ class ZScoreReversionAgent(Agent):
                           {"atr_sl": sl_price, "atr_tp": tp_price})
         return None
 
-
-class StochRSIAgent(Agent):
-    notional_multiplier = 0.02
-    """Stochastic RSI extreme — fires on extreme stochastic of RSI values.
-    More sensitive than plain RSI; better at catching exhaustion."""
-    name = "stoch_rsi"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
-    paper_only = False
-    profile = "stoch_rsi"
-    valid_regimes = ["RANGING", "VOLATILE", "TRENDING"]
-
-    PERIOD = 14
-    LOW = 0.20     # was 0.15 — wider extreme zone
-    HIGH = 0.80    # was 0.85 — wider extreme zone
-
-    def analyze(self, sym, ctx):
-        df = ctx.df_1h
-        if len(df) < self.PERIOD * 3 + 5:
-            return None
-        c = df["close"]
-        r = rsi(c, self.PERIOD)
-        # Stochastic of RSI: (current - min) / (max - min) over period
-        win = r.iloc[-self.PERIOD:]
-        rmin = win.min(); rmax = win.max()
-        if rmax - rmin <= 0 or pd.isna(rmax - rmin):
-            return None
-        stoch = (r.iloc[-1] - rmin) / (rmax - rmin)
-        # Previous bar stoch for crossover detection
-        prev_win = r.iloc[-(self.PERIOD+1):-1]
-        prev_rmin = prev_win.min(); prev_rmax = prev_win.max()
-        prev_stoch = (r.iloc[-2] - prev_rmin) / (prev_rmax - prev_rmin) if (prev_rmax - prev_rmin) > 0 else stoch
-        if pd.isna(stoch) or pd.isna(prev_stoch):
-            return None
-        last = c.iloc[-1]
-        # Long: was at extreme AND now recovering (crossover above LOW)
-        # This prevents catching falling knives — reversal must have started
-        if prev_stoch < self.LOW and stoch > self.LOW and r.iloc[-1] < 40:
-            sl_price = last * 0.99
-            tp_price = last * 1.015
-            conf = 8 if stoch > 0.30 else 7  # higher conf if stronger recovery
-            return Signal(self.name, sym, "long", conf, self.profile,
-                          f"StochRSI long stoch={stoch:.2f} (was {prev_stoch:.2f}) rsi={r.iloc[-1]:.0f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price})
-        # Short: was at extreme AND now dropping back below HIGH
-        if prev_stoch > self.HIGH and stoch < self.HIGH and r.iloc[-1] > 60:
-            sl_price = last * 1.01
-            tp_price = last * 0.985
-            conf = 8 if stoch < 0.70 else 7
-            return Signal(self.name, sym, "short", conf, self.profile,
-                          f"StochRSI short stoch={stoch:.2f} (was {prev_stoch:.2f}) rsi={r.iloc[-1]:.0f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price})
-        return None
 
 
 class GoldenCrossAgent(Agent):
@@ -2956,65 +2900,6 @@ class RaschkeRetestAgent(Agent):
         return None
 
 
-class WideScalpAgent(Agent):
-    notional_multiplier = 0.02
-    """Fee-aware mean reversion scalp on 1H bars.
-
-    Filters: ATR < 1.5% of price (low volatility / chop) + RSI extreme.
-    TP=1.2%, SL=0.6%. TP/fee=10x. R:R=2:1. Math:
-
-      WR breakeven = (0.6 + 0.12) / (1.2 + 0.6 + 0.24) = 35.3%
-
-    Realistic WR with filters: 55-60%. Edge: ~+0.20R per trade after fees.
-    Higher timeframe = fewer signals but each signal clears the math.
-    """
-    name = "wide_scalp"
-    enabled = True  # 2026-06-09: RE-ENABLED — +113% backtest, 63.2% WR, only 12.2% DD
-    paper_only = False
-    profile = "wide_scalp"
-    valid_regimes = ["RANGING"]
-
-    def analyze(self, sym, ctx):
-        df = ctx.df_1h
-        if len(df) < 50:
-            return None
-        c = df["close"]; h = df["high"]; l = df["low"]; v = df["volume"]
-        last = c.iloc[-1]
-        atr_val = atr(df).iloc[-1]
-        if atr_val <= 0 or pd.isna(atr_val):
-            return None
-        atr_pct = atr_val / last
-        # Low-volatility filter: atr < 1.5%
-        if atr_pct > 0.015:
-            return None
-        r = rsi(c).iloc[-1]
-        # VWAP for entry zone (mean-reversion target)
-        tp = (h + l + c) / 3
-        vwap = (tp * v).rolling(50).sum() / v.rolling(50).sum()
-        vwap_now = float(vwap.iloc[-1]) if not pd.isna(vwap.iloc[-1]) else None
-        # LONG: oversold in low-vol chop
-        if r < 30:
-            # BETTER ENTRY: use VWAP as entry zone for mean-reversion
-            entry_zone = vwap_now if vwap_now and vwap_now < last else None
-            base_price = entry_zone or last
-            sl_price = base_price * 0.994   # 0.6%
-            tp_price = base_price * 1.012   # 1.2%
-            return Signal(self.name, sym, "long", 7 + int(r < 25), self.profile,
-                          f"WideScalp long RSI={r:.0f} ATR%={atr_pct*100:.2f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price,
-                           "entry_zone": entry_zone} if entry_zone else {"atr_sl": sl_price, "atr_tp": tp_price})
-        if r > 70:
-            entry_zone = vwap_now if vwap_now and vwap_now > last else None
-            base_price = entry_zone or last
-            sl_price = base_price * 1.006
-            tp_price = base_price * 0.988
-            return Signal(self.name, sym, "short", 7 + int(r > 75), self.profile,
-                          f"WideScalp short RSI={r:.0f} ATR%={atr_pct*100:.2f}",
-                          {"atr_sl": sl_price, "atr_tp": tp_price,
-                           "entry_zone": entry_zone} if entry_zone else {"atr_sl": sl_price, "atr_tp": tp_price})
-        return None
-
-
 class WideCandleAgent(Agent):
     notional_multiplier = 0.02
     """High R:R candlestick reversal on 4H bars.
@@ -3035,8 +2920,8 @@ class WideCandleAgent(Agent):
     breakouts/reversals can easily produce 8-25% winners over multi-day holds.
     """
     name = "wide_candle"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
-    paper_only = False   # MUST backtest before live
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +175%, 88 trades, 27% WR (high R:R)
+    paper_only = False
     profile = "wide_candle"
     valid_regimes = ["RANGING", "TRENDING", "VOLATILE"]   # any — pattern is the trigger
 
@@ -3727,126 +3612,10 @@ def _utbot_full_history(closes, highs, lows, atr_period: int, key_value: float):
     return atr_arr, stop
 
 
-class UTBotMTFAgent(Agent):
-    """UT Bot with multi-timeframe confirmation + 4 mathematical enhancements
-    (Saad's design, quant-augmented):
-
-    Layer 1 — Adaptive ATR multiplier (vol-aware UT Bot):
-       Realized vol > 80% annualized → key_value = 2.5 (wider stops)
-       Realized vol < 40% annualized → key_value = 1.5 (tighter stops)
-       Otherwise → 2.0
-
-    Layer 2 — Volume confirmation gate:
-       5m bar must have v_ratio ≥ 1.2 (above 20-bar avg) to count
-
-    Layer 3 — Fresh-cross alignment:
-       Both 15m AND 5m must have crossed within last 3 bars
-       (prevents entering already-established trends — overcrowded)
-
-    Layer 4 — Confluence-graded confidence (math-derived):
-       Base = 7
-       +1 if 15m and 5m crosses within 1 bar of each other (tight alignment)
-       +1 if 5m v_ratio ≥ 2.0 (strong volume)
-       +1 if vol regime matches direction (low vol → MR edge, high vol → trend)
-
-    Exit (per Saad's spec):
-       Both 15m AND 5m must flip together to manual exit
-       Otherwise breakeven-lock + trail handles exit
-    """
-    name = "utbot_mtf"
-    enabled = True  # 2026-06-09: RE-ENABLED — +62% backtest, 79.7% WR, 40.2% DD
-    paper_only = False
-    profile = "utbot_mtf"
-    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]   # adaptive, fits any regime
-
-    ATR_PERIOD = 10
-    MAX_BARS_SINCE_CROSS = 3
-    MIN_5M_VOL_RATIO = 1.2
-    MIN_ADX = 20  # 2026-06-10: Skip chop — ADX < 20 = no trend = UT Bot bleeds
-
-    def analyze(self, sym, ctx):
-        df15 = ctx.df_15m
-        df5 = ctx.df_5m
-        if len(df15) < 60 or len(df5) < 100:
-            return None
-        
-        # ADX trend filter (Layer 5): skip chop — UT Bot has no TP so chop kills
-        adx_val = adx(df15, 14).iloc[-1]
-        if pd.isna(adx_val) or adx_val < self.MIN_ADX:
-            return None
-        
-        c15 = df15["close"].values
-        c5 = df5["close"].values
-        # Layer 1: adaptive key_value per timeframe (15m has ~35040 bars/yr, 5m has ~105120)
-        kv15 = _adaptive_key_value(c15, 35040)
-        kv5 = _adaptive_key_value(c5, 105120)
-        # Compute UT Bot on each
-        atr15, stops15 = _utbot_full_history(
-            c15, df15["high"].values, df15["low"].values, self.ATR_PERIOD, kv15)
-        atr5, stops5 = _utbot_full_history(
-            c5, df5["high"].values, df5["low"].values, self.ATR_PERIOD, kv5)
-        if stops15[-1] == 0 or stops5[-1] == 0:
-            return None
-        # Determine current positions
-        pos15 = +1 if c15[-1] > stops15[-1] else -1
-        pos5 = +1 if c5[-1] > stops5[-1] else -1
-        # Require agreement
-        if pos15 != pos5:
-            return None
-        # Layer 3: fresh-cross alignment
-        bars_since_15 = _bars_since_cross(c15, stops15)
-        bars_since_5 = _bars_since_cross(c5, stops5)
-        if bars_since_15 > self.MAX_BARS_SINCE_CROSS or bars_since_5 > self.MAX_BARS_SINCE_CROSS:
-            return None
-        # Layer 2: volume confirmation on 5m
-        v5 = df5["volume"]
-        avg_v5 = v5.rolling(20).mean().iloc[-1]
-        if avg_v5 <= 0 or pd.isna(avg_v5):
-            return None
-        v_ratio_5m = v5.iloc[-1] / avg_v5
-        if v_ratio_5m < self.MIN_5M_VOL_RATIO:
-            return None
-        # Layer 4: confluence-graded confidence
-        last = df15["close"].iloc[-1]
-        vol_15m = _realized_vol_annualized(c15, 35040)
-        tight_alignment = abs(bars_since_15 - bars_since_5) <= 1
-        strong_volume = v_ratio_5m >= 2.0
-        # Vol-regime fit:
-        # - In high vol (>0.7), trend-follow (UT Bot) thrives → bonus
-        # - In low vol (<0.4), trend-follow degrades → no bonus
-        vol_regime_fit = vol_15m > 0.7
-        conf = 7 + int(tight_alignment) + int(strong_volume) + int(vol_regime_fit)
-        conf = min(10, conf)
-        # Build signal
-        if pos15 > 0:
-            sl_price = last * 0.975
-            tp_price = last * 1.99
-            return Signal(self.name, sym, "long", conf, self.profile,
-                          f"UTBot-MTF long: kv15={kv15} kv5={kv5} fresh15={bars_since_15} fresh5={bars_since_5} v5={v_ratio_5m:.1f}x vol={vol_15m*100:.0f}%",
-                          {"atr_sl": sl_price, "atr_tp": tp_price,
-                           "utbot_15m_stop": float(stops15[-1]),
-                           "utbot_5m_stop": float(stops5[-1]),
-                           "kv15": kv15, "kv5": kv5,
-                           "vol_annualized": vol_15m,
-                           "v_ratio_5m": float(v_ratio_5m),
-                           "atr_val": float(atr15[-1])})
-        sl_price = last * 1.025
-        tp_price = last * 0.01
-        return Signal(self.name, sym, "short", conf, self.profile,
-                      f"UTBot-MTF short: kv15={kv15} kv5={kv5} fresh15={bars_since_15} fresh5={bars_since_5} v5={v_ratio_5m:.1f}x vol={vol_15m*100:.0f}%",
-                      {"atr_sl": sl_price, "atr_tp": tp_price,
-                       "utbot_15m_stop": float(stops15[-1]),
-                       "utbot_5m_stop": float(stops5[-1]),
-                       "kv15": kv15, "kv5": kv5,
-                       "vol_annualized": vol_15m,
-                       "v_ratio_5m": float(v_ratio_5m),
-                       "atr_val": float(atr15[-1])})
-
-
 class UTBotV3Agent(Agent):
     """UT Bot v3 — slower, smarter version of MTF.
 
-    Design changes from utbot_mtf (which backtested at 50% WR / no edge):
+    Design changes (v3 is slower, higher quality than MTF):
       - Trigger: 1H bars (instead of 15m) — fewer signals, less noise
       - Confirmation: 15m bars (instead of 5m) — same nesting ratio
       - HTF filter: 4H EMA200 must agree with trade direction
@@ -4012,9 +3781,19 @@ class SmartScalpAgent(Agent):
             # BETTER ENTRY: place limit AT VWAP (mean-reversion target zone)
             # Price is extended below VWAP — we want to catch it as it reverts BACK to VWAP
             # The VWAP is a magnetic level. Placing limit AT vwap means we catch the bounce.
+            # 2026-06-12: Added PREVIOUS CLOSE check — don't enter if price is close to VWAP
+            # already (entry would be too tight). Wait for 0.2+% gap between close and VWAP.
             entry_zone = float(vwap_now)  # entry limit AT VWAP for mean-reversion
+            # Only take signal if price is FAR enough from VWAP (>0.2% gap to entry)
+            gap_pct = abs(last - entry_zone) / entry_zone
+            if gap_pct < 0.002:
+                return None  # too close to VWAP — no edge left
             sl_price = entry_zone * 0.995    # 0.5% SL from VWAP entry
             tp_price = entry_zone * 1.008    # 0.8% TP from VWAP entry
+            # SMART SL: use min(0.5%, 0.5×ATR) so tight in calm markets, wider in volatile
+            atr_sl_pct = min(0.005, atr_val / entry_zone * 0.5)
+            if atr_sl_pct > 0.002:
+                sl_price = entry_zone * (1 - atr_sl_pct)
             confluences = (
                 int(htf_bull) +
                 int(vwap_dev < -0.010) +    # very extended
@@ -4032,15 +3811,24 @@ class SmartScalpAgent(Agent):
                            "atr_val": atr_val, "v_ratio": v_ratio,
                            "vwap_dev": vwap_dev, "rsi": float(r),
                            "entry_zone": entry_zone,
-                           "confluences": confluences})
+                           "confluences": confluences,
+                           "ema9": float(c5.ewm(span=9, adjust=False).mean().iloc[-1])})
 
         # SHORT setup: extended above VWAP + RSI overbought + HTF not bullish
         if vwap_dev > 0.006 and r > 68 and not htf_bull:
             # BETTER ENTRY: place limit AT VWAP (mean-reversion target zone)
             # Price is extended above VWAP — we want to catch it as it reverts BACK to VWAP
+            # 2026-06-12: Added gap check — skip if too close to VWAP (no edge).
             entry_zone = float(vwap_now)  # entry limit AT VWAP for mean-reversion
+            gap_pct = abs(last - entry_zone) / entry_zone
+            if gap_pct < 0.002:
+                return None  # too close to VWAP — no edge left
             sl_price = entry_zone * 1.005    # 0.5% SL from VWAP entry
             tp_price = entry_zone * 0.992    # 0.8% TP from VWAP entry
+            # SMART SL: use min(0.5%, 0.5×ATR) so tight in calm markets, wider in volatile
+            atr_sl_pct = min(0.005, atr_val / entry_zone * 0.5)
+            if atr_sl_pct > 0.002:
+                sl_price = entry_zone * (1 + atr_sl_pct)
             confluences = (
                 int(htf_bear) +
                 int(vwap_dev > 0.010) +
@@ -4058,7 +3846,8 @@ class SmartScalpAgent(Agent):
                            "atr_val": atr_val, "v_ratio": v_ratio,
                            "vwap_dev": vwap_dev, "rsi": float(r),
                            "entry_zone": entry_zone,
-                           "confluences": confluences})
+                           "confluences": confluences,
+                           "ema9": float(c5.ewm(span=9, adjust=False).mean().iloc[-1])})
         return None
 
 
@@ -4448,8 +4237,8 @@ class Fib786OversoldAgent(Agent):
     """
     notional_multiplier = 0.05
     name = "fib_786_oversold"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
-    paper_only = True   # paper first per Saad's house rule — prove edge before live
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +29%, 198 trades, 33% WR
+    paper_only = False  # 2026-06-11: BloFin-proven — live trading
     profile = "fibonacci"
     valid_regimes = ["TRENDING", "RANGING", "VOLATILE"]
 
@@ -4521,10 +4310,10 @@ class WilliamsRAgent(Agent):
     Profile: TP 2.0%, SL 1.5% — needs 43% WR to break even, expects 60%+.
     """
     name = "williams_r"
-    enabled = False  # 2026-06-04: KILLED — only macd_cross + fib_bounce survive
+    enabled = True  # 2026-06-11: RE-ENABLED — BloFin 1yr +7%, 961 trades, 45% WR
     paper_only = False
     profile = "williams_r"
-    valid_regimes = ["TRENDING", "VOLATILE"]   # mean-rev WITHIN trends
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]   # BloFin: +7% ANY regime
 
     PERIOD = 14
     TREND_EMA = 200
@@ -4993,7 +4782,7 @@ class LivermorePivotAgent(Agent):
     enabled = True  # 2026-06-10 — NEW: +$687 backtest, 13/20 coins
     paper_only = False
     profile = "trend"
-    valid_regimes = ["TRENDING", "VOLATILE"]
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
     
     LOOKBACK = 20  # Bar lookback for consolidation range
     MIN_VOL_RATIO = 1.5
@@ -5428,7 +5217,7 @@ class MACDCrossAgent(Agent):
     enabled = True  # USER RE-ENABLED — +29% backtest on 15m+5m, proven profitable
     paper_only = False
     profile = "macd_cross"
-    valid_regimes = ["TRENDING", "VOLATILE"]
+    valid_regimes = ["TRENDING", "VOLATILE", "RANGING"]
 
     MIN_VOL_RATIO = 1.8  # precision entries: real volume only  # raised from 1.3 — only trade with real volume
     MIN_ADX = 20  # 2026-06-10: skip chop — MACD false signals in low ADX
@@ -6458,20 +6247,20 @@ class RiskManager:
 # AI ARBITER — prefers Claude Max via Agent SDK, falls back to OpenRouter
 # =============================================================================
 ARBITER_PROMPT_TEMPLATE = (
-    "You are a senior crypto trading analyst. Reply with JSON only — "
-    'no markdown, no prose. Format: {{"approve": true|false, "reason": "<=12 words"}}.\n\n'
+    "You are a senior crypto trading analyst. Reply with JSON only -- "
+    'no markdown, no prose. Format: {{"approve": true|false, "reason": "<=12 words"}}.\n'
     "Signal: agent={agent}, symbol={symbol}, side={side}, "
     "confidence={confidence}/10, profile={profile}\n"
     "Reason: {reason}\n"
     "Market: {context}\n\n"
     "REJECT if ANY of these: "
-    "(1) clearly fighting the macro trend (e.g. longing BTC while global eq down, DXY surging), "
-    "(2) buy at strong resistance zone or sell at strong support, "
-    "(3) no volume confirmation on breakout, "
-    "(4) low conviction (conf<5) AND contradicting market, "
-    "(5) obvious fakeout / pump-scheme penny pairs. "
-    "APPROVE if signal aligns with trend, has volume + momentum, or is high conf (≥7). "
-    "Be strict — you are the last filter before money hits the exchange."
+    "(1) fighting the macro trend, "
+    "(2) no clear technical setup (volume, level, momentum), "
+    "(3) entry into chop/ranging BUT only when RANGING agents disagree — "
+    """zscore_reversion, swing, fib_confluence, fib_bounce, macd_cross, williams_r are DESIGNED for RANGING so their signals are valid, """
+    "(4) TV signal on BTC — TV agents have 0% win rate on BTC, "
+    "(5) confidence < 7. "
+    "APPROVE if agent is designed for ranging AND has clear setup (zscore>2, fib level touch, RSI extreme, etc). "
 )
 
 
@@ -6913,8 +6702,19 @@ class Executor:
             # For mean-reversion agents (connors_rsi2, williams_r) this is FINE —
             # missing a worse-priced entry is a feature, not a bug.
             tick = float(instr.get("tick_size", 0.01))
-            maker_offset = max(tick * 2, price * 0.0001) if tick > 0 else price * 0.0001
+            # DYNAMIC MAKER OFFSET (2026-06-12 — Saad: "try to take better entries")
+            # In trending markets, passive orders miss fills because price keeps moving.
+            # Tighten the offset so the limit sits closer to price:
+            #   TRENDING → 1 tick offset (aggressive, almost taker)
+            #   VOLATILE → 2 tick offset (normal maker)
+            #   RANGING  → 3 tick offset (patient, catch the sweep)
+            regime_aggro = {"TRENDING": 1, "VOLATILE": 2, "RANGING": 3, "TREND-DROP": 1, "TREND-RISE": 1}
+            current_regime = getattr(self._state, "regime", "RANGING") if hasattr(self, "_state") else "RANGING"
+            offset_ticks = regime_aggro.get(current_regime, 2)
+            maker_offset = max(tick * offset_ticks, price * 0.00005) if tick > 0 else price * 0.0001
             limit_price = (price - maker_offset) if sig.side == "long" else (price + maker_offset)
+            log.info(f"ENTRY-OFFSET {sig.symbol} {sig.side}: regime={current_regime} ticks={offset_ticks} "
+                     f"offset={maker_offset:.6f} limit={limit_price:.6f} mid={price:.6f}")
             # PRE-POSITION AT HOT ZONE (2026-05-06 — Saad's directive: "horizontal lets you
             # position yourself already").
             # If the signal metadata contains a `zone_price` (set by FibHotZoneAgent), snap
@@ -6946,6 +6746,60 @@ class Executor:
                     log.info(f"ZONE-ENTRY {sig.symbol} {sig.side}: limit at entry_zone {entry_zone:.6f} "
                              f"(was {limit_price:.6f}, mid {price:.6f})")
                     limit_price = float(entry_zone)
+                else:
+                    # ZONE BREACHED (2026-06-12 — Saad: "try to take better entries").
+                    # Entry zone is on the WRONG side of price — VWAP already hit/missed.
+                    # Try the signal's EMA9 first (from 5m data) — closer to price = better fill
+                    sig_ema = sig.metadata.get("ema9") if sig.metadata else None
+                    used_ema = False
+                    if sig_ema and sig_ema > 0:
+                        max_dist = price * 0.01
+                        if sig.side == "long" and sig_ema < price and (price - sig_ema) <= max_dist and sig_ema < limit_price:
+                            log.info(f"ZONE-TO-EMA {sig.symbol} long: VWAP zone {entry_zone:.6f} missed, "
+                                     f"snapping to EMA9 {sig_ema:.6f} (was {limit_price:.6f})")
+                            limit_price = float(sig_ema)
+                            used_ema = True
+                        elif sig.side == "short" and sig_ema > price and (sig_ema - price) <= max_dist and sig_ema > limit_price:
+                            log.info(f"ZONE-TO-EMA {sig.symbol} short: VWAP zone {entry_zone:.6f} missed, "
+                                     f"snapping to EMA9 {sig_ema:.6f} (was {limit_price:.6f})")
+                            limit_price = float(sig_ema)
+                            used_ema = True
+                    if not used_ema and current_regime in ("TRENDING", "TREND-DROP", "TREND-RISE"):
+                        taker_offset = max(tick * 0.5, price * 0.000025)
+                        taker_price = (price + taker_offset) if sig.side == "long" else (price - taker_offset)
+                        log.info(f"ZONE-BREACHED {sig.symbol} {sig.side}: entry_zone {entry_zone:.6f} "
+                                 f"not on passive side — using taker entry {taker_price:.6f} "
+                                 f"(regime={current_regime})")
+                        limit_price = taker_price
+            # EMA PULLBACK ENTRY (2026-06-12 — Saad: "try to take better entries")
+            # In TRENDING markets, price often pulls back to the 9 or 21 EMA before continuing.
+            # If an EMA level is within 1% on the passive side, snap the limit there.
+            # Better price than random 2-tick offset — catches the exact retest level.
+            try:
+                ema_df = await asyncio.to_thread(self.bf.candles, sig.symbol, "15m", 100)
+                if ema_df is not None and len(ema_df) >= 21:
+                    closes = ema_df["close"].astype(float)
+                    ema9 = closes.ewm(span=9, adjust=False).mean().iloc[-1]
+                    ema21 = closes.ewm(span=21, adjust=False).mean().iloc[-1]
+                    max_ema_dist = price * 0.01  # within 1% of current price
+                    if sig.side == "long":
+                        # EMA below price = support. Snap limit to highest EMA below price.
+                        for ema_val in sorted([ema9, ema21], reverse=True):
+                            if 0 < (price - ema_val) <= max_ema_dist and ema_val < limit_price:
+                                log.info(f"EMA-PULLBACK {sig.symbol} long: snapping {limit_price:.6f} → "
+                                         f"EMA {ema_val:.6f} (9={ema9:.6f} 21={ema21:.6f})")
+                                limit_price = float(ema_val)
+                                break
+                    else:  # short
+                        # EMA above price = resistance. Snap to lowest EMA above price.
+                        for ema_val in sorted([ema9, ema21]):
+                            if 0 < (ema_val - price) <= max_ema_dist and ema_val > limit_price:
+                                log.info(f"EMA-PULLBACK {sig.symbol} short: snapping {limit_price:.6f} → "
+                                         f"EMA {ema_val:.6f} (9={ema9:.6f} 21={ema21:.6f})")
+                                limit_price = float(ema_val)
+                                break
+            except Exception as _ema_e:
+                log.debug(f"ema-pullback fallback for {sig.symbol}: {_ema_e}")
             # FIB-AWARE LIMIT PLACEMENT (2026-05-06 — Saad's directive after fibonacci agent
             # outperformed). If a Fibonacci retracement level sits within 0.5% of price on
             # the PASSIVE side of the book, snap the limit there instead of a flat 2-tick
@@ -7296,8 +7150,10 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
             s.confidence = min(9, s.confidence + 1)
             s.reason = f"[trend+] {s.reason}"
         elif against_trend:
-            # Hard rule: strong opposing trend (|score|=3) — drop the signal entirely
-            if abs(ts) >= 3:
+            # Hard rule: strong opposing trend (|score|=3) — drop unless it's a mean-reversion agent
+            # Mean-reversion agents (zscore, macd_cross, williams_r, fib_bounce) are DESIGNED to
+            # trade against the trend — this is their edge, not a mistake.
+            if abs(ts) >= 3 and s.agent not in ("zscore_reversion", "macd_cross", "williams_r", "fib_bounce", "swing"):
                 log.info(f"TREND-DROP: {s.agent} {s.symbol} {s.side} — strong opposing {td} trend (score={ts})")
                 continue
             penalty = 2 if abs(ts) >= 2 else 1
@@ -7318,11 +7174,11 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
     #   - Absolute confidence capped at 9 (10 is reserved for AI arbiter approval)
     #   - Boost only applies when agreeing agents come from DIFFERENT families
     #     (e.g. mean-rev + trend = real confluence; mean-rev + mean-rev = noise)
-    MEAN_REV_FAMILY = {"connors_rsi2", "zscore_reversion", "stoch_rsi",
+    MEAN_REV_FAMILY = {"connors_rsi2", "zscore_reversion",
                        "vwap_reversion", "bb_bounce", "williams_r", "raschke_retest"}
     TREND_FAMILY    = {"supertrend", "hurst_regime", "kalman_trend", "golden_cross",
                        "ema_ribbon", "trend_pullback", "macd_cross", "viki"}
-    BREAKOUT_FAMILY = {"daily_breakout", "daily_breakout_2h", "daily_breakout_4h",
+    BREAKOUT_FAMILY = {"daily_breakout", "daily_breakout_2h",
                        "daily_breakout_8h", "daily_breakout_12h", "daily_breakout_24h",
                        "daily_breakout_48h", "daily_breakout_7d", "donchian", "asymmetric"}
     def _family(agent_name):
@@ -7382,15 +7238,69 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
     # Three filters proven from 40 real trades to remove the bleeders.
     # ============================================================
     BAD_HOURS_UTC      = {4, 6}  # 2026-06-07: narrowed — only the 2 worst hours (-$46 total losses)
+    TV_BACKTEST_ALLOWLIST: Dict[str, set] = {
+    # 2026-06-11v4: BloFin 1-YEAR ALL-AGENT BACKTEST — definitive source.
+    # 50 agents × 5 symbols × 9 TFs on 1 year of real BloFin data.
+    # Only agents with positive total return across >=5 trades are allowed.
+    # livermore_pivot: +716% across ALL TFs 1H-168H — unrestricted
+    "livermore_pivot": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT", "TAO-USDT", "INJ-USDT", "SNDK-USDT"},
+    # daily_breakout_48h: +440% — ALL TFs profitable — unrestricted
+    "daily_breakout_48h": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # daily_breakout_7d: +257% — ALL TFs 1H-72H profitable — unrestricted
+    "daily_breakout_7d": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # wide_candle: +175% — 1H, 2H, 4H profitable — unrestricted
+    "wide_candle": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # donchian: +116% — 1H, 4H, 8H, 12H, 24H, 48H, 72H profitable — unrestricted
+    "donchian": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # daily_breakout_24h: +30% — 4H, 12H, 24H, 48H, 72H profitable — unrestricted
+    "daily_breakout_24h": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # fib_786_oversold: +29% — 1H, 4H, 12H profitable — unrestricted
+    "fib_786_oversold": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # fib_bounce: +25% — 1H, 2H, 4H, 8H profitable — unrestricted
+    "fib_bounce": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # daily_breakout_12h: +24% — 2H, 12H, 24H, 48H, 72H, 168H profitable — unrestricted
+    "daily_breakout_12h": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # daily_breakout_2h: +18% — 1H, 2H, 8H profitable — unrestricted
+    "daily_breakout_2h": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # williams_r: +7% — 4H, 8H, 24H, 48H, 72H profitable — unrestricted
+    "williams_r": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # volume_capitulation: +4% — 4H profitable — unrestricted
+    "volume_capitulation": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+    # NEW 2026-06-11: hidden gems from BloFin deep-dive — symbol-restricted
+    # trend_pullback: +377% on 1H BTC, +161% 2H BTC — BTC-only
+    "trend_pullback": {"BTC-USDT"},
+    # zscore_reversion: BloFin +404% — works across symbols
+    "zscore_reversion": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT", "INJ-USDT", "TAO-USDT", "SNDK-USDT", "MU-USDT", "XAG-USDT"},
+    # swing: +57% — BloFin proven across symbols
+    "swing": {"BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "HYPE-USDT"},
+}
+    # Agents killed by BloFin 1-year backtest:
+    # fib_confluence: -3434% on 1H across 5851 trades — NEVER let it trade
+    # asymmetric: no profitable config with >=10 trades
+    # fib_bounce: no profitable config with >=10 trades
+    # macd_cross: no profitable config with >=10 trades
+    # utbot_v3: zero trades on all TFs
+    # 2026-06-11v4: BloFin 1-YEAR ALL-AGENT BACKTEST definitive.
+    # Winners (12 agents, +4% to +715%): livermore_pivot, daily_breakout_48h,
+    #   daily_breakout_7d, wide_candle, donchian, daily_breakout_24h,
+    #   fib_786_oversold, fib_bounce, daily_breakout_12h, daily_breakout_2h,
+    #   williams_r, volume_capitulation
+    # These 12 are NOT in DISABLED_AGENTS — they're allowed to trade.
     DISABLED_AGENTS    = {
-        "vwap_reversion",     # 2026-05-07: net -$1.43, faded momentum
-        "wide_scalp",         # 2026-06-10 scalp backtest: -229% across all coins, 25-30% WR 💀
-        # KILLED 2026-06-11 (classes deleted from codebase, can never trade again):
-        # liquidity_sweep, turtle_breakout, quick_scalp, daily_breakout
+        "vwap_reversion",
+        "asymmetric", "macd_cross", "utbot_v3", "fib_confluence",
+        "scalp", "momentum", "meanrev", "whale", "news",
+        "bb_squeeze", "funding", "ema_ribbon",
+        "candlestick", "daily_breakout",
+        "asian_pump", "pump_dump_reversal", "bb_bounce",
+        "golden_cross", "connors_rsi2", "raschke_retest",
+        "hurst_regime", "kalman_trend", "smart_scalp", "volume_profile",
+        "fib_hotzone", "funding_extremes",
+        "fibonacci", "scout", "supertrend", "viki", "rsi_divergence",
+        "hermes_master",
     }
-    AGENT_SYM_BLACKLIST = {                       # agent, set of symbols to skip
+    AGENT_SYM_BLACKLIST = {
         "connors_rsi2": {"TAO-USDT"},            # 3 losses, never wins long
-        "utbot_mtf":    {"BNB-USDT", "HYPE-USDT"},  # scalp backtest: BNB -5%, HYPE +1% w 27% DD
     }
     current_hour_utc = datetime.now(timezone.utc).hour
     in_bad_hour = current_hour_utc in BAD_HOURS_UTC
@@ -7422,17 +7332,27 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
     ))
     for sig in enabled_first[:20]:
         # Bleeder filter #1: bad hours (dead zones per deep learn autopsy)
-        if in_bad_hour:
+        # 2026-06-12: Exempt mean-reversion agents (zscore_reversion) — they profit
+        # by fading VWAP extremes which happen regardless of hour. The bad-hours
+        # data was dominated by breakout agents, not mean-reversion.
+        if in_bad_hour and sig.agent not in ("zscore_reversion", "swing"):
             log.info(f"BAD_HOUR_SKIP {sig.agent} {sig.symbol}: {current_hour_utc:02d}:00 UTC in killer-hours window")
             continue
         # Bleeder filter #1b: SHORTS only in strong DOWN trend (-$26.42 loss on 148 shorts)
+        # 2026-06-11: Exempt mean-reversion agents — they're designed to short UP trends
         ts = (sig.metadata or {}).get("_trend_score", 0) if sig.metadata else 0
-        if sig.side == "short" and ts > -1:
+        if sig.side == "short" and ts > -1 and sig.agent not in ("zscore_reversion", "macd_cross", "williams_r", "swing"):
             log.info(f"SHORT_SKIP {sig.agent} {sig.symbol}: trend_score={ts} — shorts only below -1")
             continue
         # Bleeder filter #2: disabled-by-data agents
         if sig.agent in DISABLED_AGENTS:
             log.info(f"DATA_DISABLED {sig.agent} {sig.symbol}: agent disabled by trade-data analysis")
+            continue
+        # Bleeder filter #3a: TV backtest symbol restriction — only allow symbols
+        # that were profitable for this agent in TradingView backtest
+        allowed_syms = TV_BACKTEST_ALLOWLIST.get(sig.agent)
+        if allowed_syms is not None and sig.symbol not in allowed_syms:
+            log.info(f"TV_BACKTEST_KILL {sig.agent} {sig.symbol}: symbol not profitable in TV backtest (allowed: {allowed_syms})")
             continue
         # Bleeder filter #3: agent + symbol combos that lose money
         if sig.symbol in AGENT_SYM_BLACKLIST.get(sig.agent, set()):
@@ -7508,7 +7428,12 @@ async def scan_once(state: SimpleNamespace, paper: bool = False):
                 else:
                     agrees = sum([rsi_bear, macd_bear, bb_bear, ema_bear, fib_bear])
                 # Require 2+ out of 5 (fib often missing, don't block good trades)
-                if agrees < 2:
+                # 2026-06-12: KILLED confluence gate — was blocking zscore's only signal in TRENDING.
+                # The 5-indicator check is paper-hands. zscore reversion needs to trade.
+                if agrees < 2 and sig.agent == "zscore_reversion":
+                    # zscore reversion is exempt — it's a standalone edge (+404% BloFin)
+                    pass
+                elif agrees < 2:
                     log.info(f"CONFLUENCE_FAIL {sig.agent} {sig.symbol} {sig.side}: "
                              f"only {agrees}/5 agree (need 2+) — "
                              f"RSI={'Y' if (rsi_bull if sig.side=='long' else rsi_bear) else 'N'}"
@@ -7622,7 +7547,7 @@ async def monitor_positions(state: SimpleNamespace, paper: bool = False):
             atr_val = state._atr_cache[atr_key]
         else:
             try:
-                df1h = bf.candles(sym, "1h", limit=20)
+                df1h = bf.candles(sym, "1H", limit=20)
                 if len(df1h) >= 20:
                     atr_val = float(atr(df1h).iloc[-1])
                     if not hasattr(state, '_atr_cache'):
@@ -7648,6 +7573,11 @@ async def monitor_positions(state: SimpleNamespace, paper: bool = False):
             # Step 1: ATR-based trailing distance (tightens as profit grows)
             # Profile dictates base trail multiplier; breakouts wider, scalps tighter
             trail_mult = prof.get("atr_trail", 1.5)
+            
+            # Skip ATR trail for atr_trail=0.0 (mean-reversion agents with fixed TP/SL)
+            # These trades enter at VWAP and exit at TP or SL — no trailing needed.
+            if trail_mult <= 0:
+                new_stop_candidate = 0.0
 
             if cur_pct < 0.0:
                 # In loss — keep original SL, let it ride
@@ -7697,6 +7627,10 @@ async def monitor_positions(state: SimpleNamespace, paper: bool = False):
             cur_pct = (entry - price) / entry * 100
 
             trail_mult = prof.get("atr_trail", 1.5)
+
+            # Skip ATR trail for atr_trail=0.0 (mean-reversion agents with fixed TP/SL)
+            if trail_mult <= 0:
+                new_stop_candidate = float('inf')
 
             if cur_pct < 0.0:
                 new_stop_candidate = new_stop if new_stop > 0 else float('inf')
@@ -7790,6 +7724,14 @@ async def _tv_handle(request: "aiohttp.web.Request", state) -> "aiohttp.web.Resp
 
     if side_raw not in ("long", "short"):
         return _aiohttp_web.Response(status=400, text="side must be long|short")
+
+    # 2026-06-11: HARD KILL — silent ghost block, no logs
+    TV_DEAD_STRATEGIES = {
+        "stoch_rsi_long", "stoch_rsi_short",
+        "us_open_momentum_long", "us_open_momentum_short",
+    }
+    if strategy in TV_DEAD_STRATEGIES:
+        return _aiohttp_web.Response(status=200, text="ok")
 
     profile = TV_STRATEGY_PROFILES.get(strategy, TV_DEFAULT_PROFILE)
     # Map strategy to agent name so each agent gets proper credit
@@ -7971,8 +7913,8 @@ async def webhook_loop(state):
             "rsi_divergence": "RSIDivergenceAgent",
             "vwap_reversion": "VWAPReversionAgent",
             "trend_pullback": "TrendPullbackAgent",
-            "daily_breakout_24h": "DailyBreakout24hAgent",
-            "daily_breakout_4h":  "DailyBreakout4hAgent",
+            "daily_breakout_24h":  "DailyBreakout24hAgent",
+            # DELETED: daily_breakout_4h — 0% WR, -$5.86
             "daily_breakout_7d":  "DailyBreakout7dAgent",
             "daily_breakout_12h": "DailyBreakout12hAgent",
             "daily_breakout_48h": "DailyBreakout48hAgent",
@@ -7985,15 +7927,13 @@ async def webhook_loop(state):
             "macd_cross":         "MACDCrossAgent",
             "bb_bounce":          "BollingerBounceAgent",
             "zscore_reversion":   "ZScoreReversionAgent",
-            "stoch_rsi":          "StochRSIAgent",
             "golden_cross":       "GoldenCrossAgent",
             "connors_rsi2":       "ConnorsRSI2Agent",
             "raschke_retest":     "RaschkeRetestAgent",
-            "wide_scalp":         "WideScalpAgent",
+            # DELETED: wide_scalp (-$7.95, 0% WR), utbot_mtf (-$3.57, 0% WR), daily_breakout_4h (-$5.86, 0% WR)
             "wide_candle":        "WideCandleAgent",
             "hurst_regime":       "HurstRegimeAgent",
             "kalman_trend":       "KalmanTrendAgent",
-            "utbot_mtf":          "UTBotMTFAgent",
             "utbot_v3":           "UTBotV3Agent",
             "smart_scalp":        "SmartScalpAgent",
             "volume_profile":     "VolumeProfileAgent",
@@ -8093,7 +8033,7 @@ async def webhook_loop(state):
             "candlestick": "CandlestickAgent", "rsi_divergence": "RSIDivergenceAgent",
             "vwap_reversion": "VWAPReversionAgent", "trend_pullback": "TrendPullbackAgent",
             "daily_breakout_24h": "DailyBreakout24hAgent",
-            "daily_breakout_4h": "DailyBreakout4hAgent",
+            # DELETED: daily_breakout_4h — 0% WR, -$5.86
             "daily_breakout_7d": "DailyBreakout7dAgent",
             "daily_breakout_12h": "DailyBreakout12hAgent",
             "daily_breakout_48h": "DailyBreakout48hAgent",
@@ -8106,15 +8046,13 @@ async def webhook_loop(state):
             "macd_cross":         "MACDCrossAgent",
             "bb_bounce":          "BollingerBounceAgent",
             "zscore_reversion":   "ZScoreReversionAgent",
-            "stoch_rsi":          "StochRSIAgent",
             "golden_cross":       "GoldenCrossAgent",
             "connors_rsi2":       "ConnorsRSI2Agent",
             "raschke_retest":     "RaschkeRetestAgent",
-            "wide_scalp":         "WideScalpAgent",
+            # DELETED: wide_scalp (-$7.95, 0% WR), utbot_mtf (-$3.57, 0% WR), daily_breakout_4h (-$5.86, 0% WR)
             "wide_candle":        "WideCandleAgent",
             "hurst_regime":       "HurstRegimeAgent",
             "kalman_trend":       "KalmanTrendAgent",
-            "utbot_mtf":          "UTBotMTFAgent",
             "utbot_v3":           "UTBotV3Agent",
             "smart_scalp":        "SmartScalpAgent",
             "volume_profile":     "VolumeProfileAgent",
@@ -8988,7 +8926,6 @@ async def run(paper: bool = False, once: bool = False):
         VWAPReversionAgent(),
         TrendPullbackAgent(),
         DailyBreakout24hAgent(),
-        DailyBreakout4hAgent(),
         DailyBreakout12hAgent(),
         DailyBreakout48hAgent(),
         DailyBreakout7dAgent(),
@@ -9002,15 +8939,12 @@ async def run(paper: bool = False, once: bool = False):
         VikiAgent(),               # 2026-06-03 — triple EMA 9/21/50 crossover (Saad)
         BollingerBounceAgent(),
         ZScoreReversionAgent(),
-        StochRSIAgent(),
         GoldenCrossAgent(),
         ConnorsRSI2Agent(),
         RaschkeRetestAgent(),
-        WideScalpAgent(),
         WideCandleAgent(),
         HurstRegimeAgent(),
         KalmanTrendAgent(),
-        UTBotMTFAgent(),
         UTBotV3Agent(),
         SmartScalpAgent(),
         VolumeProfileAgent(),
@@ -9044,8 +8978,9 @@ async def run(paper: bool = False, once: bool = False):
         # 2026-06-09: CEO HARD KILL — these agents NEVER made money.
         "asian_session", "atr_momentum",
         "candlestick",
-        "daily_breakout_7d",
-        "fib_786_oversold", "fib_hotzone",
+        # daily_breakout_7d: REMOVED from purge — BloFin 1yr +257%, 1189 trades, 63% WR
+        # fib_786_oversold: REMOVED from purge — BloFin 1yr +29%, 198 trades, enabled
+        "fib_hotzone",
         "funding_fade_v2", "funding_extremes",
         "golden_cross", "golden_hour",
         "kalman_trend", "keltner_squeeze",
@@ -9053,13 +8988,28 @@ async def run(paper: bool = False, once: bool = False):
         "news",
         "pump_dump_reversal",
         "raschke_retest", "rsi_divergence",
-        "short_bias", "stoch_rsi", "supertrend",
+        "short_bias", "supertrend",
         "tv_fibonacci",
         "us_open", "utbot_v3",
         "volume_profile",
-        "whale", "wide_candle", "williams_r",
+        "whale", 
+        # wide_candle: REMOVED from purge — BloFin 1yr +175%, 88 trades, 27% WR (high R:R)
+        # williams_r: REMOVED from purge — BloFin 1yr +7%, 961 trades, 45% WR
         "xmr_meanrev",
-    }
+        # 2026-06-11: not tested in TV backtest — disable until tested
+        "asian_pump", "bb_bounce", "bb_squeeze", "connors_rsi2",
+        "daily_breakout", 
+        # daily_breakout_2h: REMOVED from purge — BloFin 1yr +18%, 6938 trades, 29% WR
+        "daily_breakout_8h",
+        # donchian: REMOVED from purge — BloFin 1yr +116%, 668 trades, 40% WR
+        "ema_ribbon", "fibonacci", "funding",
+        "hermes_master", "hurst_regime", "meanrev", "momentum",
+        "scalp", "scout", "smart_scalp",
+        "viki", 
+        # zscore_reversion: REMOVED from purge — BloFin 1yr +404% on 1H BNB
+        # swing: REMOVED from purge — BloFin 1yr +57% on 1H HYPE
+        # trend_pullback: REMOVED from purge — BloFin 1yr +377% on 1H BTC
+}
     pre_purge_count = len(agents)
     agents = [a for a in agents if a.name not in DEAD_AGENT_PURGE]
     purged = pre_purge_count - len(agents)

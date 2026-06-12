@@ -354,7 +354,7 @@ def handle_message(h: Hermes, text: str) -> str:
             return f"<pre>{json.dumps(h.exec('undeploy', agent=rest[0]), indent=2)}</pre>"
         if cmd == "/deploy":
             if not rest:
-                return "Usage: /deploy AGENT [size]  (e.g. /deploy stoch_rsi 0.05)"
+                return "Usage: /deploy AGENT [size]  (e.g. /deploy macd_cross 0.05)"
             size = float(rest[1]) if len(rest) > 1 else 0.05
             return f"<pre>{json.dumps(h.exec('deploy', agent=rest[0], size=size), indent=2)}</pre>"
         if cmd == "/flatten":

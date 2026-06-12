@@ -149,7 +149,7 @@ def diagnose_loss(trade: Dict[str, Any]) -> LossDiagnosis:
         fix = LOSS_PATTERNS["toxic_hour"]["fix"]
         confidence = 0.7
         pattern_sig = f"toxic_hour_{hour}"
-    elif agent in ("momentum", "ema_ribbon", "daily_breakout_2h", "daily_breakout_4h",
+    elif agent in ("momentum", "ema_ribbon", "daily_breakout_2h",
                    "daily_breakout_24h", "supertrend"):
         cause = "trending_agent_in_ranging"
         fix = LOSS_PATTERNS["trending_agent_in_ranging"]["fix"]
@@ -289,7 +289,7 @@ def generate_new_strategies() -> List[StrategyDNA]:
             sym_class = "all"
 
         # Infer regime from agent type (since regime column not in DB)
-        ranging_agents = {"stoch_rsi", "funding_extremes", "zscore_reversion",
+        ranging_agents = {"funding_extremes", "zscore_reversion",
                           "bb_bounce", "fibonacci", "connors_rsi2", "meanrev"}
         regime_hint = "RANGING" if agent in ranging_agents else "TRENDING"
 
@@ -404,10 +404,10 @@ def score_signal_quality(signal: Dict[str, Any],
     confidence = signal.get("confidence", 5)
 
     # Regime alignment
-    ranging_agents = {"stoch_rsi", "funding_extremes", "zscore_reversion",
+    ranging_agents = {"funding_extremes", "zscore_reversion",
                       "bb_bounce", "fibonacci", "connors_rsi2", "meanrev"}
     trending_agents = {"momentum", "ema_ribbon", "macd_cross", "daily_breakout_2h",
-                       "daily_breakout_4h", "daily_breakout_24h", "supertrend"}
+                       "daily_breakout_24h", "supertrend"}
 
     if regime == "RANGING" and agent in ranging_agents:
         score += 20
